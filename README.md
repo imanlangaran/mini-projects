@@ -4,7 +4,7 @@
 ## folder structure
     .
     ├── subtitle-translator
-        ├── main.py
+    │   ├── main.py
     │   └── english-sub.srt
     └── ...
     
