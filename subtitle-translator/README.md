@@ -1,0 +1,2 @@
+# subtitle-translator
+In this project, we simply read each line of a '.srt' file which is the file format for subtitle files and pass it to a 'Translate' instance and write the translated result to a new file.

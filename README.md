@@ -1,10 +1,11 @@
 # Mini projects
 ### In this repo i'll upload my personal mini projects
 
-## folder structure
-    .
-    ├── subtitle-translator
-    │   ├── main.py
-    │   └── english-sub.srt
-    └── ...
+## Structures
+.<br>
+├── [subtitle-translator](./subtitle-translator/)<br>
+│   ├── main.py<br>
+│   ├── farsi-sub.txt<br>
+│   └── english-sub.srt<br>
+└── ...
     
