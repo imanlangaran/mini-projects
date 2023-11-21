@@ -9,9 +9,7 @@ from skimage.filters.rank import mean
 from skimage.exposure import adjust_gamma
 
 
-
 image = img_as_ubyte(imread(os.path.join(os.getcwd(),'./skeleton.tif'), as_gray=True))
-
 
 laplacian = (laplace(image, ksize=3))
 

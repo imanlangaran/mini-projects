@@ -23,6 +23,6 @@ plt.subplot(131), plt.imshow(image, cmap='gray'), plt.title('Origin')
 plt.subplot(132), plt.imshow(gaussian_image, cmap='gray'), plt.title('Gaussian')
 plt.subplot(133), plt.imshow(sp_image, cmap='gray'), plt.title('Salt & Pepper')
 
-plt.savefig("result1.jpg")
+plt.savefig("1-result.jpg")
 
 plt.show()
