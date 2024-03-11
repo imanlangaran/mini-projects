@@ -7,6 +7,11 @@ In this repo i'll upload my personal mini projects and files
 
 ```
 mini-projects
+├── CV
+│   └── HW1
+│       ├── 1.ipynb
+│       ├── 1.py
+│       └── جواب تمرین ۱.pdf
 ├── DIP
 │   ├── HW1-ImanLangaran
 │   │   ├── 1.py
