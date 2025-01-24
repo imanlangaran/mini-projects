@@ -1,9 +1,8 @@
 import os
 from datetime import datetime
 
-# os_out = os.popen("")
-
-os_out = os.popen("git add .").read()
+os.popen("git add .")
 
 commit_message = datetime.now().strftime("%m/%d %H:%M")
-os_out = os.popen(f'git commit -m "{commit_message}"').read()
+os.popen(f'git commit -m "{commit_message}"')
+os.popen("git push")
