@@ -1,16 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-function App() {
-  const [state, setState] = useState({
-    details: [],
-    user: '',
-    quote: '',
-    refresh: false,
-  })
-
-  useEffect(() => {
-    axios
+const fetch = (state, setState) => {
+  axios
       .get("http://127.0.0.1:8000/wel/")
       .then((response) => {
         console.log(response.data);
@@ -25,7 +17,19 @@ function App() {
       .catch((error) => {
         console.log(error);
       });
-  },[state.refresh]);
+}
+
+function App() {
+  const [state, setState] = useState({
+    details: [],
+    user: '',
+    quote: '',
+    refresh: false,
+  })
+
+  useEffect(() => {
+    fetch(state, setState);
+  },[]);
 
   const renderSwitch = (param) => {
     switch (param + 1) {
@@ -55,7 +59,9 @@ function App() {
     })
     .then((res) =>{
       console.log(res)
-      setState({user:'',quote:'', refresh:true})
+      setState({user:'',quote:''});
+      fetch(state, setState)
+
     })
     .catch((err) => {console.log(err)})
   };
