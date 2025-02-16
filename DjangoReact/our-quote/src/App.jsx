@@ -92,7 +92,7 @@ function App() {
           onChange={handleInput}/>
         </div>
 
-        <div className="input-group mv-3">
+        <div className="input-group mb-3">
           <div className="input-group-prepend">
             <span className="input-group-text">
               your qoute
