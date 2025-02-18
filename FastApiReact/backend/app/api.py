@@ -17,8 +17,8 @@ app.add_middleware(
 )
 
 todos = [
-    {"id": 1, "item": "description"},
-    {"id": 2, "item": "description"},
+    {"id": '1', "item": "description"},
+    {"id": '2', "item": "description"},
 ]
 
 
@@ -30,3 +30,10 @@ async def read_root() -> dict:
 @app.get("/todos", tags=["todos"])
 async def read_todos() -> dict:
     return {"data": todos}
+
+@app.post("/todo" , tags=["todos"])
+async def add_todo(todo: dict) -> dict:
+    todos.append(todo)
+    return {
+        "data": "Todo added"
+    }
