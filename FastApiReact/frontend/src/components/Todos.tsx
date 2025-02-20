@@ -140,7 +140,7 @@ const UpdateTodo = ({ item, id, fetchTodos }: UpdateTodoProps) => {
       </DialogContent>
     </DialogRoot>
   )
-}
+};
 
 interface TodoHelperProps {
   item: string;
@@ -156,11 +156,30 @@ const TodoHelper = ({ id, item, fetchTodos }: TodoHelperProps) => {
           {item}
           <Flex align="end">
             <UpdateTodo item={item} id={id} fetchTodos={fetchTodos} />
+            <DeleteTodo id={id} fetchTodos={fetchTodos}/>
           </Flex>
         </Text>
       </Flex>
     </Box>
   )
+}
+
+interface deleteTodoProps {
+  id: string;
+  fetchTodos: () => void;
+}
+
+const DeleteTodo = ({ id, fetchTodos }: deleteTodoProps) => {
+  const deleteTodo = async () => {
+    await fetch(`http://localhost:8000/todo/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id })
+    });
+    await fetchTodos();
+  }
+
+  return (<Button h="1.5rem" size='sm' marginLeft={2} onClick={deleteTodo}>Delete Todo</Button>);
 }
 
 export default Todos;
