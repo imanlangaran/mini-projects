@@ -28,18 +28,8 @@ in their newer version of [time.ir](new.time.ir) they used APIs.
 so you can easily call them and store or use raw data.
 
 here is the bash request 
+
 ```bash
-curl ^"https://api.time.ir/v1/event/fa/events/yearlycalendar?year=1404^" ^
-  -X ^"OPTIONS^" ^
-  -H ^"accept: */*^" ^
-  -H ^"accept-language: en-US,en;q=0.9^" ^
-  -H ^"access-control-request-headers: x-api-key^" ^
-  -H ^"access-control-request-method: GET^" ^
-  -H ^"origin: https://new.time.ir^" ^
-  -H ^"referer: https://new.time.ir/^" ^ &
-curl ^"https://api.time.ir/v1/event/fa/events/yearlycalendar?year=1404^" ^
-  -H ^"accept: application/json, text/plain, */*^" ^
-  -H ^"accept-language: en-US,en;q=0.9^" ^
-  -H ^"origin: https://new.time.ir^" ^
-  -H ^"referer: https://new.time.ir/^" ^
+curl 'https://api.time.ir/v1/event/fa/events/yearlycalendar?year=1404' \
+  -H 'x-api-key: ZAVdqwuySASubByCed5KYuYMzb9uB2f7'
 ```
