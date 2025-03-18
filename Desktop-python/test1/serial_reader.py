@@ -1,6 +1,5 @@
 import sys
 import serial
-import serial.tools.list_ports
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QTextEdit
 from PyQt5.QtCore import QTimer
 
@@ -13,7 +12,65 @@ class SerialReaderApp(QWidget):
     def initUI(self):
         # Set up the window
         self.setWindowTitle("Serial Port Reader")
-        self.setGeometry(100, 100, 400, 300)
+        self.setGeometry(100, 100, 500, 400)
+
+        # Apply Bootstrap-like styles
+        self.setStyleSheet("""
+            /* Main window */
+            QWidget {
+                background-color: #f8f9fa;
+                font-family: 'Arial';
+                font-size: 14px;
+            }
+
+            /* Labels */
+            QLabel {
+                font-size: 16px;
+                font-weight: bold;
+                color: #212529;
+                margin-bottom: 10px;
+            }
+
+            /* Buttons */
+            QPushButton {
+                background-color: #007bff;
+                color: white;
+                border: 1px solid #007bff;
+                border-radius: 4px;
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+                border-color: #004085;
+            }
+            QPushButton:pressed {
+                background-color: #004085;
+            }
+
+            /* Text Edit */
+            QTextEdit {
+                background-color: white;
+                color: #212529;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                padding: 10px;
+                font-size: 14px;
+            }
+            QTextEdit:focus {
+                border-color: #80bdff;
+                outline: none;
+            }
+
+            /* Container-like effect */
+            QWidget#container {
+                background-color: white;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 20px;
+                margin: 10px;
+            }
+        """)
 
         # Create a layout
         layout = QVBoxLayout()
