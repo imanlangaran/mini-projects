@@ -3,9 +3,9 @@
 import copy
 from typing import Dict
 import uuid
-from domain.entities.profession import Profession
-from domain.value_objects import ProfessionId
-from interactor.interfaces.repositories.profession_repository import (
+from src.domain.entities.profession import Profession
+from src.domain.value_objects import ProfessionId
+from src.interactor.interfaces.repositories.profession_repository import (
     ProfessionRepositoryInterface,
 )
 

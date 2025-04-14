@@ -2,8 +2,8 @@
 
 from abc import abstractmethod
 
-from domain.entities.profession import Profession
-from domain.value_objects import ProfessionId
+from src.domain.entities.profession import Profession
+from src.domain.value_objects import ProfessionId
 
 
 class ProfessionRepositoryInterface:

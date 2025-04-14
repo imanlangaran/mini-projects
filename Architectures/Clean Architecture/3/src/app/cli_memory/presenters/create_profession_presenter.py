@@ -1,8 +1,8 @@
 """Module for the CreateProfessionPresenter"""
 
 from typing import Dict
-from interactor.dtos.create_profession_dtos import CreateProfessionOutputDto
-from interactor.interfaces.presenters.create_profession_presenter import (
+from src.interactor.dtos.create_profession_dtos import CreateProfessionOutputDto
+from src.interactor.interfaces.presenters.create_profession_presenter import (
     CreateProfessionPresenterInterface,
 )
 

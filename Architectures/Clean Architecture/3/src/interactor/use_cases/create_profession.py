@@ -1,15 +1,15 @@
 """This module is responsible for creating a new profession"""
 
 from typing import Dict
-from interactor.dtos.create_profession_dtos import (
+from src.interactor.dtos.create_profession_dtos import (
     CreateProfessionInputDto,
     CreateProfessionOutputDto,
 )
-from interactor.interfaces.presenters.create_profession_presenter import (
+from src.interactor.interfaces.presenters.create_profession_presenter import (
     CreateProfessionPresenterInterface,
 )
-from interactor.interfaces.repositories.profession_repository import (
-    PsofessionPepositoryInterface,
+from src.interactor.interfaces.repositories.profession_repository import (
+    ProfessionRepositoryInterface,
 )
 
 
@@ -19,7 +19,7 @@ class CreateProfessionUseCase:
     def __init__(
         self,
         presenter: CreateProfessionPresenterInterface,
-        repository: PsofessionPepositoryInterface,
+        repository: ProfessionRepositoryInterface,
     ):
         self.presenter = presenter
         self.repository = repository

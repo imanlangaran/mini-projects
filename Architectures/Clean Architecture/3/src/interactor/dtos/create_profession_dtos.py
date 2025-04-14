@@ -3,7 +3,7 @@
 
 from dataclasses import dataclass
 
-from domain.entities.profession import Profession
+from src.domain.entities.profession import Profession
 
 
 @dataclass

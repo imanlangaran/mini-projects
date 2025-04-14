@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass
-from domain.value_objects import ProfessionId
+from src.domain.value_objects import ProfessionId
 
 @dataclass
 class Profession:
