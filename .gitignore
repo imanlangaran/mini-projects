@@ -6,3 +6,5 @@ node_modules
 venv
 .pytest_cache
 .env
+SpeechToSummaryText/fonts/IRANSansX-Regular.ttf
+*/log/*
