@@ -11,6 +11,29 @@ from datetime import timedelta, datetime
 import tempfile
 from dotenv import load_dotenv
 
+
+VALID_USERNAME = "admin"
+VALID_PASSWORD = "1234"
+
+
+def check_login():
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+
+    if not st.session_state.logged_in:
+        st.title("🔐 Login Required")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Login"):
+            if username == VALID_USERNAME and password == VALID_PASSWORD:
+                st.session_state.logged_in = True
+                st.success("✅ Login successful!")
+                st.rerun()
+            else:
+                st.error("❌ Invalid credentials")
+        st.stop()  # Prevents the rest of the app from loading
+
+
 # ========== ENV ==========
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -84,8 +107,7 @@ def show_logs_ui():
 
     # Get all log folders, sorted by timestamp descending
     log_folders = [
-        f for f in os.listdir(log_root)
-        if os.path.isdir(os.path.join(log_root, f))
+        f for f in os.listdir(log_root) if os.path.isdir(os.path.join(log_root, f))
     ]
     if not log_folders:
         st.sidebar.info("هنوز لاگی وجود ندارد.")
@@ -94,7 +116,7 @@ def show_logs_ui():
 
     # Show most recent log by default
     selected_log = st.sidebar.selectbox(
-        "یک لاگ را انتخاب کنید:", log_folders, format_func=lambda x: x.replace('_', ' ')
+        "یک لاگ را انتخاب کنید:", log_folders, format_func=lambda x: x.replace("_", " ")
     )
     if not selected_log:
         return
@@ -103,7 +125,7 @@ def show_logs_ui():
     st.sidebar.markdown(f"**زمان:** `{selected_log}`")
 
     # List files in log folder, show text files first, then others
-    files = sorted(os.listdir(log_dir), key=lambda x: (not x.endswith('.txt'), x))
+    files = sorted(os.listdir(log_dir), key=lambda x: (not x.endswith(".txt"), x))
     for fname in files:
         file_path = os.path.join(log_dir, fname)
         # Try to read as text, fallback to binary
@@ -217,11 +239,12 @@ def save_request_log(
 
 
 def main():
+    check_login()  # 🔐 Require login before accessing the app
     st.set_page_config(
         page_title="Persian Audio Summarizer",
         layout="centered",
     )
-    
+
     # show_logs_ui()
 
     print("🔵 App started: Setting up font and UI")
@@ -229,6 +252,11 @@ def main():
 
     st.title("🧠 Persian Audio Summarizer")
     st.markdown("آپلود فایل صوتی فارسی و دریافت خلاصه آن با کمک هوش مصنوعی")
+    
+    # 🚪 Logout button at the end
+    if st.button("🔓 خروج از حساب"):
+        st.session_state.logged_in = False
+        st.rerun()
 
     uploaded_file = st.file_uploader(
         "🎙️ فایل صوتی را انتخاب کنید", type=["mp3", "wav", "m4a"]
