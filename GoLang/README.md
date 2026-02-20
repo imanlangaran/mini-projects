@@ -1,5 +1,5 @@
 # Notes from Learning GO 
-
+> [nice to read](https://gobyexample.com/)
 ## declare varialbes
 
 for declare variables use := or var = 
