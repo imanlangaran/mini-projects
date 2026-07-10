@@ -1,26 +1,59 @@
 # Software Development Roadmap
 
+## Project Definition Questionnaire
+
+Before starting any new project, fill out this questionnaire to clarify scope, goals, and constraints. The answers will guide all subsequent phases.
+
+### 1. Project Description
+What kind of software are you building? (web app, CLI, API, mobile, IoT, etc.) Provide a brief summary.
+
+### 2. Primary Objective
+What is the main goal? (e.g., solve a specific problem, practice full-stack development, learn project management skills, build a portfolio piece, etc.)
+
+### 3. Your Background
+List your current skills and experience level (junior/mid/senior) for each relevant technology (programming languages, frameworks, databases, DevOps, etc.).
+
+### 4. Available Time & Timeline
+- How many hours per week can you dedicate?
+- What is your target completion date or duration (e.g., 4 weeks, 3 months)?
+
+### 5. MVP Features
+List the core features that are **must-have** for the first release. Also list **nice-to-have** and **future** ideas.
+
+### 6. Tech Stack Choices
+Decide on:
+- **Frontend**: (e.g., React, Next.js, Vue, Svelte, etc.)
+- **Backend**: (e.g., FastAPI, Node.js, Django, etc.)
+- **Database**: (e.g., PostgreSQL, SQLite, MongoDB, etc.)
+- **Authentication**: (JWT, OAuth, session-based, etc.)
+- **Deployment Target**: (VPS, Render, Heroku, AWS, etc.)
+- **Other tools**: (Docker, CI/CD, monitoring, etc.)
+
+### 7. Deployment Goal
+Will this project be deployed publicly, used by real users, or remain local for learning/portfolio?
+
+### 8. Success Criteria
+How will you know the project is successful? (e.g., working MVP deployed, positive user feedback, passing all tests, meeting timeline, etc.)
+
+---
+
 ## Phase 0 — Define the Project (1–3 days)
 
-Goal: remove uncertainty before coding.
+Goal: remove uncertainty before coding. Use your answers above to:
 
 * Write the problem statement:
-
   * Who has the problem?
   * What problem are you solving?
   * Why does this need to exist?
 
-* Define MVP (minimum viable product):
-
-  * List all possible features.
-  * Mark:
-
+* Define MVP (minimum viable product) in detail:
+  * Refine the list from the questionnaire.
+  * Mark each feature as:
     * Must have
     * Nice to have
     * Future
 
 Example:
-
 ```
 MVP:
 ✓ User authentication
@@ -35,7 +68,6 @@ Later:
 ```
 
 Deliverables:
-
 * README.md with project vision
 * Feature list
 * Basic user stories
