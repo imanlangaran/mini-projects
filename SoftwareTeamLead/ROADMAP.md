@@ -319,6 +319,20 @@ Based on README's recommendation + your background (Junior JS dev, PHP, MSc AI):
 
 ---
 
+## 🔄 How to Use This Roadmap
+
+The repetition pattern for every block of work:
+
+> 1. **Pick a week** from the current month's plan (`plans/month-*.md`)
+> 2. **Study** the topic (~4 hrs/week at your 15–18 hrs/week budget)
+> 3. **Take notes** using `notes/_TEMPLATE.md` → save into the relevant phase folder (`notes/phase-*-engineering/`)
+> 4. **Update TRACKER.md** with your progress (swap ⚪ → 🔵 → 🟢 → 🟡 → ✅)
+> 5. **Move to next week**
+
+That's it. Small, consistent wins. Notes are non-negotiable — 10 minutes max per session.
+
+---
+
 ## 📊 Progress at a Glance
 
 | Phase | Status | Active Period |
