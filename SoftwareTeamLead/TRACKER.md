@@ -10,9 +10,9 @@
 ### 🔷 JavaScript / TypeScript
 | Topic | Status | Date Started | Notes File |
 |-------|--------|-------------|------------|
-| Advanced types (generics, unions, mapped) | ⚪ | | |
-| Utility types & type helpers | ⚪ | | |
-| Discriminated unions, conditional types | ⚪ | | |
+| Advanced types (generics, unions, mapped) | 🔵 2026-07-14 | |
+| Utility types & type helpers | 🔵 2026-07-14 | |
+| Discriminated unions, conditional types | 🔵 2026-07-14 | |
 | Node.js + TS project setup (ESM, strict) | ⚪ | | |
 | Async patterns (promises, streams, events) | ⚪ | | |
 
