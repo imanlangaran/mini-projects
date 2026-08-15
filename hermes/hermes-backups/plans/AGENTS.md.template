@@ -1,0 +1,51 @@
+# Project guidance — ALL agents MUST follow (auto-loaded in every session in this repo)
+
+You are working inside an agent-driven project. Read this file first; it is the standing rulebook.
+Work comes from approved feature cards and milestone task plans — never improvise scope.
+
+## 1. How to know what to build (task clarity)
+- Work items come from: (a) milestone task plans in this repo (`.hermes/plans/` or `docs/plans/`),
+  (b) kanban feature cards, (c) `docs/` in this repo.
+- A feature card is workable ONLY when it carries an approved spec + acceptance criteria
+  (Definition of Ready). No spec = do not start; ask the product owner.
+- Build exactly what the spec states. If the spec is missing something the code needs, STOP and
+  raise it back — never silently improvise.
+
+## 2. Spec-first (SDD)
+- The spec is the source of truth: behavior, acceptance criteria (Given/When/Then), boundaries, non-goals.
+- Tests are derived from the spec: every acceptance criterion maps to ≥1 test case.
+- Implementer builds TO the spec; Tester verifies AGAINST the spec; PRs reference the spec version.
+- Spec changes require product-owner approval and re-enter the gates:
+  update spec → update tests → re-verify full suite → only then continue/PR.
+
+## 3. Database access
+- No agent touches the database directly — no migrations, no schema edits, no raw/ad-hoc SQL.
+- Only the schema/migration owner runs migrations, via the migration mechanism.
+- Write code against the data-access layer (repositories/models) only.
+
+## 4. Feature confirmation
+- A feature is NOT claimable/in-progress until the product owner has approved it and its
+  acceptance criteria. Never implement an unconfirmed feature.
+
+## 5. Git branching & versioning
+- GitHub Flow / trunk-based; `main` is protected and always releasable.
+- Branches: `feature/<issue-key>-<slug>`, `fix/<...>`, `release/vX.Y.Z`.
+- Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `chore:`.
+- Semantic Versioning; tags `vX.Y.Z`; merge to `main` only via approved PR.
+
+## 6. Test-before-PR loop
+1. Implement the feature on its branch + write tests (TDD: red → green → refactor).
+2. The TESTING agent runs the FULL test suite against the feature branch.
+   - ALL pass → the Implementer may open the pull request for that feature.
+   - ANY fail → the Testing agent reports the failing issue(s) to the Implementer;
+     the Implementer fixes; the loop repeats until the suite passes.
+3. A PR must NEVER be opened against a feature whose full suite has not passed.
+
+## 7. Human review gate
+- The product owner reviews every pull request.
+- Merge ONLY after: full suite green + explicit product-owner approval.
+- Never self-merge; never merge an unapproved PR.
+
+## Non-negotiables
+- Definition of Done: tested → reviewed → merged → documented → deployed → monitored.
+- Never skip a gate to save time. If in doubt, ask the product owner.
