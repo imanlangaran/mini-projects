@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --night: #0c0c0d;
+    --surface: #141416;
+    --ink: #efe9e0;
+    --muted: #9c978e;
+    --accent: #c34a2f;
+    --hairline: rgba(239, 233, 224, 0.12);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    background-color: var(--night);
+    color: var(--ink);
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--night);
+  }
+
+  /* Thin editorial scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--surface);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(239, 233, 224, 0.25);
+    border: 3px solid var(--surface);
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  /* Monospace index / metadata label */
+  .label-mono {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* Shared line */
+  .hairline {
+    border-color: var(--hairline);
+  }
+}
+
+@layer utilities {
+  /* Text that reveals via mask + translateY */
+  .reveal-mask {
+    overflow: hidden;
+  }
+
+  .display-xl {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 330;
+    font-variation-settings: "opsz" 144;
+    letter-spacing: -0.02em;
+    line-height: 0.98;
+  }
+
+  .display-lg {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 350;
+    font-variation-settings: "opsz" 72;
+    letter-spacing: -0.015em;
+    line-height: 1.04;
+  }
+
+  /* Keep the 3D canvas out of layout flow, fixed behind content */
+  .canvas-fixed {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Custom cursor active only when .has-cursor is on the root — set by
+     CustomCursor when it actually mounts. Never hide the native cursor under
+     reduced motion or on touch, where the custom cursor doesn't exist. */
+  .has-cursor [data-cursor] {
+    cursor: none;
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .has-cursor [data-cursor] {
+      cursor: auto;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Pinned horizontal track needs the body to allow it */
+.sticky-section {
+  position: relative;
+}
