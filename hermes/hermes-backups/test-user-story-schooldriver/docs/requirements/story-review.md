@@ -246,3 +246,54 @@
 | P11-05 | Version/status hygiene: header v0.10 = §6 v0.10; no stale references | ✅ Consistent |
 
 **Result: zero findings — all three independent reviews' findings (IR-01…18, V2-01…11, F1…F7) closed.** DRAFT v0.10 stands. Ready for final human approval (Gate 1).
+
+---
+
+## 14. MOKEAB scope amendment (pass 12) — capture review of v0.10 → v0.11 (2026-08-15)
+
+**Trigger:** Product owner adopted the MOKEAB domain rules into the MVP (D-29…D-33): single-sex schools, gender driver rule, car purity, school shifts (fixed), service areas, service hours, direction independence — governing model: full matching + exact-optimality routing (Branch A).
+
+**What changed (v0.10 → v0.11):**
+- **CRs:** CR-01 (school: sex + shifts), CR-02 (student: sex = school sex, one shift), CR-03 (driver: sex, service areas, per-shift/direction availability), CR-06 (feasibility includes gender/area/time), CR-07 (objective per direction run), CR-08 (per-shift/per-direction model replaces morning/noon-reverse), CR-12 (rosters per shift/direction), CR-18 (shortfall per school/shift/direction incl. cause), CR-19 (flag applies to all shifts); **new CR-21 (gender rules + car purity), CR-22 (service area), CR-23 (time containment), CR-24 (direction independence)**.
+- **Stories:** US-01 (sex + shifts ACs), US-02 (sex validation + shift selection), US-03 (+AC-9…11: sex, areas, direction flags), US-04 (per-shift/per-direction feasibility, gender/area AC-9/10, per-direction optimality), US-05 (report shows shift/direction), US-07 (per-shift/direction rosters; no fabricated reverse), US-08 (shows shift + per-direction driver).
+- **Decisions:** D-29…D-33; D-06 annotated partially superseded (time + morning-run parts).
+- **OQs:** OQ-16 (area representation mode — before Phase 3), OQ-17 (circular shifts — post-MVP), OQ-18 (capacity per direction — confirm). Assumptions A-13 (capacity per direction run) and A-14 (fixed shifts only) added.
+- **Budget note:** NFR-08 re-check trigger (Gate B) applies — the amendment adds estimated +8–16 person-days (~$1,600–3,200) over the $6,000 build ceiling; ceiling recorded as approved number pending Gate B re-check at Phase 3.
+
+**Self-review notes (in-session desk check, per pass-6 lesson NOT an independent pass):**
+- Consistency between CRs, stories, and traceability matrix verified (matrix updated).
+- No implementation language introduced (areas/shifts expressed behaviorally).
+- The "noon = reversed morning" concept is fully removed (checked: CR-08, US-07, US-01, scope paragraph, D-06 note).
+- Gender/car-purity rules do not contradict CR-04 (one-school-per-driver) — car purity is implied.
+- **Open question for the independent pass:** whether the per-direction-model changes render any previously accepted AC non-testable or contradictory (e.g., US-04 AC-2 capacity-per-direction, AC-10 area coverage), and whether D-29's "fixed shifts only" is sufficiently explicit vs OQ-17.
+
+**Result: DRAFT v0.11 stands; independent review requested before the packet (per the review loop established in passes 6/8/10).**
+
+---
+
+## 15. Independent review v4 → dispositions applied (pass 13) — 2026-08-16
+
+**Verdict (story-review-independent-v4.md): CONDITIONAL PASS — Gate 1 MAY PROCEED.** 0 Critical, **3 Major** (V4-01/02/03), 8 Minor (V4-04…11), 3 Notes (V4-12…14). All 36 prior dispositions (IR-01…18, V2-01…11, F1…F7) re-verified genuinely closed line-by-line. Pass-12's claims "morning fully removed" and "matrix updated" were challenged — correctly: D-21 still said "morning" (V4-06) and US-05 matrix row missed D-27 (V4-04).
+
+**Dispositions applied (all mechanical, → DRAFT v0.12):**
+
+| ID | Finding | Disposition |
+|---|---|---|
+| V4-02 (Major) | Feasibility defined per school+shift but not per direction — IR-01 class recurring | ✅ CR-06 + US-04 AC-1 reworded: feasibility "per school, per shift, **and per direction run**" with direction-specific eligibility |
+| V4-04 | US-05 matrix row missing D-27 | ✅ Matrix corrected |
+| V4-05 | US-06 not direction-scoped (CR-24 world) | ✅ Scope note added (direction-scope pending, closes before US-06) |
+| V4-06 | D-21 live text: "minimum total **morning** driving distance" | ✅ Reworded: "per direction run (CR-07/CR-08)" |
+| V4-08 | No AC tests CR-23 containment; US-03 no window requiredness | ✅ US-04 AC-11 (equal-boundary ineligible) + US-03 AC-12 (window required) |
+| V4-09 | US-02 AC-4 edit path skips sex/shift re-validation | ✅ AC-4 now re-validates against new school (D-30/D-33) or rejects |
+| V4-10 | Post-publication shift-time edits unguarded | ✅ OQ-10 extended with the shift-edit lifecycle question |
+| V4-11 | CR-18 remedies ignore eligibility asymmetry | ✅ CR-18 clause: added drivers must be eligible; flagging fixes demand-side only |
+| V4-12 | `getArea()` token in D-31 (Rule 7) | ✅ D-31 reworded (no code-shaped token) |
+| V4-13 | Amendment budget delta invisible in requirements.md | ✅ NFR-08 amendment note (+8–16 person-days, Gate B re-confirm) |
+| V4-14 | Mixed-sex schools implicitly out | ✅ D-30 explicit note |
+
+**Pending PO decisions (per reviewer, needed before baseline):**
+- **V4-01 (Major): DriverShift binding** — is a driver's availability entry (a) bound to a **specific school's shift** (then CR-04/US-03 AC-4 "school determined by matching" must be amended), or (b) a **school-agnostic time-window + direction-flags** declaration evaluated against whichever school shift matching allocates?
+- **V4-03 (Major): from-school run geometry** — where does the from-school run start (school vs driver origin per D-24)? Is an origin→school deadhead counted in CR-07 distance? What do "pickup order and times" mean for from-school (all-pickup-at-school + drop-off order, or staggered)?
+- **V4-07 (OQ-18): capacity semantics** — confirm capacity counted **per direction run** (as A-13/US-04 AC-2 already assert) and record it as a decision so AC-2 no longer depends on an open question.
+
+**Result: DRAFT v0.12; packet withheld until the three PO decisions are recorded.**
