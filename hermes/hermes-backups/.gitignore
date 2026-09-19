@@ -1,0 +1,5 @@
+# Raw Hermes session exports (machine transcripts, large single-line JSON)
+session.jsonl
+
+# Generated Phase-2 printable package (rebuild with: python3 plans/build_phase2_pdf.py)
+plans/phase2-ux-package.html
