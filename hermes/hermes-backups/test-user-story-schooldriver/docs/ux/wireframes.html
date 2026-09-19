@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Driver Platform — لای‌فای پرتوتایپ (low-fi prototype)</title>
+<style>
+  :root{
+    --ink:#1a1a1a; --muted:#5a5a5a; --line:#c9c9c9; --bg:#f4f4f2; --card:#ffffff;
+    --accent:#0b63a4; --accent-soft:#e3f0fa; --danger:#b3261e; --ok:#1e7d46;
+    --warn:#8a6d00; --warn-soft:#fdf3d7; --focus:#ffb703;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Vazirmatn","Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+  a{color:var(--accent)}
+  /* header */
+  header{background:#fff;border-bottom:2px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{font-size:15px;margin:0}
+  .screen-switch{display:flex;flex-wrap:wrap;gap:4px}
+  .screen-switch button{font:inherit;font-size:12px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}
+  .screen-switch button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .screen-switch button:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+  .note{font-size:12px;color:var(--muted);margin:0 auto 0 0}
+  /* screens */
+  main{max-width:1080px;margin:16px auto;padding:0 14px}
+  .screen{display:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:20px}
+  .screen.active{display:block}
+  .screen h2{font-size:18px;margin:0 0 4px}
+  .screen .gloss{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .screen .role{display:inline-block;font-size:11px;background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:2px 10px;margin-bottom:8px}
+  /* elements */
+  label{display:block;font-size:13px;font-weight:600;margin:10px 0 3px}
+  input,select,textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>*{flex:1;min-width:160px}
+  button{font:inherit;font-size:14px;padding:8px 16px;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:pointer}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.danger{background:#fff;color:var(--danger);border-color:var(--danger)}
+  button:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  .error{color:var(--danger);font-size:12px;margin:4px 0 0;display:none}
+  .error.show{display:block}
+  .warn{background:var(--warn-soft);border:1px solid #e3d59a;color:#5c4b00;font-size:12px;padding:8px 10px;border-radius:6px;margin:8px 0}
+  .hint{font-size:12px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+  th{background:#f0f0ee}
+  .tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:12px}
+  .tag.ok{background:#e3f4e9;color:var(--ok)}
+  .tag.warn{background:var(--warn-soft);color:#6b5300}
+  .tag.danger{background:#fdecea;color:var(--danger)}
+  .tag.muted{background:#eee;color:var(--muted)}
+  .badge{display:inline-block;min-width:20px;text-align:center;background:var(--danger);color:#fff;border-radius:12px;font-size:11px;padding:1px 7px;margin-right:6px}
+  .mockmap{height:150px;border:2px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;background:repeating-linear-gradient(45deg,#fafafa,#fafafa 10px,#f2f2f2 10px,#f2f2f2 20px);margin-top:6px}
+  .mockmap button{margin-top:8px}
+  .card{background:#fafafa;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:10px}
+  .card h4{margin:0 0 6px;font-size:13px}
+  .empty{border:1px dashed var(--line);background:#fbfbfa;border-radius:8px;color:var(--muted);font-size:12px;padding:14px;margin-top:8px;text-align:center}
+  .pager{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .pager button{font-size:12px;padding:4px 12px}
+  .kbd{display:inline-block;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;background:#fff}
+  .step{counter-reset:none;list-style:none;padding:0;margin:10px 0 0}
+  .step li{background:#f7f7f5;border:1px solid var(--line);border-radius:6px;padding:6px 10px;margin:4px 0;font-size:13px}
+  .step li b{color:var(--accent)}
+  .flex{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .shift-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin:4px 0;background:#fff}
+  .shift-row>div{flex:1;min-width:120px}
+  hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>سامانه جابه‌جایی مدرسه — School Driver Platform <span class="gloss">low-fi prototype (Phase 2, author-fix pass 2026-09-05)</span></h1>
+  <p class="note">راست‌به‌چپ RTL demo · فارسی با gloss انگلیسی · keyboard-accessible</p>
+  <nav class="screen-switch" aria-label="screen-switch">
+    <button data-s="S1">S1 ورود</button>
+    <button data-s="S2">S2 خانه</button>
+    <button data-s="S3">S3 مدرسه‌ها</button>
+    <button data-s="S4">S4 دانش‌آموزان</button>
+    <button data-s="S5">S5 ویرایش دانش‌آموز</button>
+    <button data-s="S6">S6 راننده</button>
+    <button data-s="S7">S7 پرونده راننده</button>
+    <button data-s="S8">S8 تطبیق</button>
+    <button data-s="S9">S9 گزارش</button>
+    <button data-s="S10">S10 خطا</button>
+    <button data-s="S11">S11 تایید</button>
+    <button data-s="S12">S12 والد</button>
+    <button data-s="S13">S13 والد-درخواست</button>
+    <button data-s="S14">S14 فهرست راننده</button>
+    <button data-s="S15">S15 تعدیل</button>
+    <button data-s="S16">S16 ویرایش مدرسه</button>
+    <button data-s="S17">S17 درخواست‌های والدین</button>
+  </nav>
+</header>
+
+<main>
+  <!-- S1 LOGIN -->
+  <section class="screen active" id="S1">
+    <span class="role">همه نقش‌ها — all roles</span>
+    <h2>ورود — Login</h2>
+    <p class="gloss">NFR-04: authentication for all roles; no assignment data before login.</p>
+    <label for="l-login">نام کاربری — username</label>
+    <input id="l-login" type="text" placeholder="مثال: admin@schooldriver">
+    <label for="l-pass">رمز عبور — password</label>
+    <input id="l-pass" type="password">
+    <p class="hint">حساب توسط مدرسه ساخته شده — accounts provisioned by school (A-11); a parent with an unaccepted registration request can sign in but sees no assignment info (US-08 AC-7).</p>
+    <div class="flex"><button class="primary">ورود — Sign in</button><button>بدون ورود — Guest tour</button></div>
+    <p class="error" role="alert">شناسه یا رمز نادرست — invalid credentials</p>
+    <hr>
+    <h4>Demo accounts</h4>
+    <table><tr><th>Role</th><th>Username</th></tr>
+      <tr><td>مدیر (admin)</td><td>admin@sd</td></tr>
+      <tr><td>راننده (driver)</td><td>driver@sd</td></tr>
+      <tr><td>والد (parent)</td><td>parent@sd</td></tr>
+    </table>
+  </section>
+
+  <!-- S2 ADMIN HOME -->
+  <section class="screen" id="S2">
+    <span class="role">مدیر — administrator</span>
+    <h2>خانه مدیر — Admin home</h2>
+    <p class="gloss">UX-OQ-22: admin home content is an OPEN question (see flows §8) — this inventory is a proposed layout, not a requirement. Parents-request queue → S17 (US-08 AC-6).</p>
+    <div class="card"><h4>اقدامات سریع — quick actions</h4>
+      <div class="flex">
+        <button onclick="switchTo('S3')">مدرسه جدید — New school</button>
+        <button onclick="switchTo('S4')">دانش‌آموز جدید — New student</button>
+        <button onclick="switchTo('S6')">راننده جدید — New driver</button>
+        <button class="primary" onclick="switchTo('S8')">تطبیق — Matching</button>
+      </div>
+    </div>
+    <div class="card"><h4>درخواست‌های والدین — parent registration requests (US-08 AC-6, CR-20/D-14)</h4>
+      <p class="hint">۳ درخواست در انتظار پذیرش — 3 requests awaiting acceptance <span class="badge">۳</span></p>
+      <div class="flex"><button class="primary" onclick="switchTo('S17')">بررسی — Review requests (S17)</button></div>
+    </div>
+    <div class="card"><h4>وضعیت — status</h4>
+      <table>
+        <tr><th>آیتم</th><th>تعداد</th><th>نشر</th></tr>
+        <tr><td>مدرسه‌ها Schools</td><td>3</td><td>—</td></tr>
+        <tr><td>دانش‌آموزان Students</td><td>127 (1 مستثنی flagged)</td><td><span class="tag danger">1 flag</span></td></tr>
+        <tr><td>رانندگان Drivers</td><td>14</td><td>—</td></tr>
+        <tr><td>آخرین تطبیق Last run</td><td>—</td><td><span class="tag ok">نشر شد published</span> 2026-08-20</td></tr>
+      </table>
+    </div>
+    <p class="hint">All lists are role-filtered (NFR-04: admin sees all).</p>
+  </section>
+
+  <!-- S3 SCHOOLS -->
+  <section class="screen" id="S3">
+    <span class="role">مدیر — administrator</span>
+    <h2>مدرسه‌ها — Schools (US-01)</h2>
+    <p class="gloss">Register a school: name, address+map coordinates (D-28), single sex (D-30), one+ shifts (D-33). Both address+coords required (D-26). List rows show all fields incl. coordinates (AC-1, D-26); each row has an Edit affordance → S16 (US-01 AC-4).</p>
+    <table>
+      <tr><th>نام name</th><th>جنسیت sex</th><th>شیفت‌ها shifts</th><th>نشانی address</th><th>مختصات coordinates (D-26)</th><th>عملیات</th></tr>
+      <tr><td>دبیرستان ن.فردوسی</td><td>دخترانه girls</td><td>07:00–12:00</td><td>...</td><td>35.6892، 51.3890</td><td><button onclick="switchTo('S16')">ویرایش — Edit</button></td></tr>
+      <tr><td>دبیرستان ا.خیام</td><td>پسرانه boys</td><td>07:00–13:00, 12:00–19:00</td><td>...</td><td>35.7320، 51.4220</td><td><button onclick="switchTo('S16')">ویرایش — Edit</button></td></tr>
+    </table>
+    <div class="empty">(حالت خالی فهرست — empty state: when the registry is empty, this card replaces the table)</div>
+    <hr>
+    <h4>ثبت مدرسه جدید — New school</h4>
+    <div class="row">
+      <div><label for="sc-name">نام مدرسه — name *</label><input id="sc-name" placeholder="مثال: دبیرستان امام"></div>
+      <div><label for="sc-sex">جنسیت — sex *</label><select id="sc-sex" aria-describedby="sc-sex-err"><option value="">—</option><option>دخترانه girls</option><option>پسرانه boys</option></select></div>
+    </div>
+    <div><label for="sc-addr">نشانی — address *</label><input id="sc-addr" placeholder="مثال: خیابان آزادی، کوچهٔ ۱۲" aria-describedby="sc-map-err"></div>
+    <div class="mockmap">🗺 نقشه ساده — simple map <br><button id="sc-map-btn" onclick="selectMap('sc-map-btn')">انتخاب موقعیت روی نقشه — Select on map *</button></div>
+    <p class="error" id="sc-sex-err" role="alert">جنسیت معتبر (دخترانه/پسرانه) لازم است — valid sex required (AC-6)</p>
+    <p class="error" id="sc-map-err" role="alert">نشانی و موقعیت روی نقشه الزامی است — address and coordinates required (AC-5)</p>
+    <div><label>شیفت‌ها — shifts (at least one) *</label>
+      <div id="sc-shifts">
+        <div class="shift-row">
+          <div><label for="sc-s1s">شروع — start</label><input id="sc-s1s" type="time" value="07:00" aria-label="shift start"></div>
+          <div><label for="sc-s1e">پایان — end</label><input id="sc-s1e" type="time" value="12:00" aria-label="shift end"></div>
+          <button type="button" onclick="removeShift(this)" data-c="sc-shifts" data-cerr="sc-shift-err">حذف — remove</button>
+        </div>
+      </div>
+      <button type="button" id="sc-add" onclick="addShift('sc-shifts','sc-shift-err')">+ شیفت دیگر — add shift</button>
+    </div>
+    <p class="error" id="sc-shift-err" role="alert">حداقل یک شیفت لازم است — at least one shift required (AC-2)</p>
+    <div class="flex"><button class="primary" onclick="validateSchool()">ثبت — Register</button></div>
+  </section>
+
+  <!-- S4 STUDENTS -->
+  <section class="screen" id="S4">
+    <span class="role">مدیر — administrator</span>
+    <h2>دانش‌آموزان — Students (US-02 / US-09)</h2>
+    <p class="gloss">Student: school (sex auto-fills from school, read-only, then stored — D-30/UX-OQ-26), one shift of that school (D-33), parent-provided address+map (D-28/D-26). Each row has an Edit affordance → S5 (US-02 AC-4). Flag toggle = US-09.</p>
+    <table>
+      <tr><th>نام</th><th>مدرسه</th><th>شیفت</th><th>وضعیت</th><th>پرچم flag</th><th>عملیات</th></tr>
+      <tr><td>زهرا رضایی</td><td>ن.فردوسی (دخترانه)</td><td>07:00–12:00</td><td><span class="tag ok">فعال active</span></td><td><button>پرچم — Flag</button></td><td><button onclick="switchTo('S5')">ویرایش — Edit (S5)</button></td></tr>
+      <tr><td>علی رضایی</td><td>ا.خیام (پسرانه)</td><td>07:00–13:00</td><td><span class="tag ok">فعال</span></td><td><button>پرچم</button></td><td><button onclick="switchTo('S5')">ویرایش — Edit (S5)</button></td></tr>
+      <tr><td>سرینا محمودی</td><td>ا.خیام (پسرانه)</td><td>12:00–19:00</td><td><span class="tag danger">مستثنی flagged</span></td><td><button>حذف پرچم — Unflag</button></td><td><button onclick="switchTo('S5')">ویرایش — Edit (S5)</button></td></tr>
+    </table>
+    <div class="empty">(حالت خالی فهرست — empty state: when the registry is empty, this card replaces the table)</div>
+    <p class="hint">Flag shown on record and removable (US-09 AC-2); flagged excluded from next run (AC-1). UX-OQ-13 (student identifier / duplicates) and OQ-15 (who initiates registration; parent-enters-address branch has no screen pending the ruling) bind here — open.</p>
+    <hr>
+    <h4>ثبت دانش‌آموز جدید — New student</h4>
+    <div class="row">
+      <div><label for="st-school">مدرسه — school *</label><select id="st-school"><option>د.فردوسی (دخترانه)</option><option>د.خیام (پسرانه)</option></select></div>
+      <div><label for="st-sex">جنسیت — sex (auto از مدرسه، سپس ثبت می‌شود — auto-filled from school, then stored, D-30)</label><input id="st-sex" value="دخترانه girls" disabled></div>
+      <div><label for="st-shift">شیفت — shift * (فقط شیفت‌های همان مدرسه — only this school's shifts, AC-6)</label><select id="st-shift"><option>07:00–12:00</option></select></div>
+    </div>
+    <div><label for="st-addr">نشانی منزل + نقشه — parent-provided address + map (D-28) *</label><input id="st-addr" placeholder="نشانی منزل — home address" aria-describedby="st-addr-err"><div class="mockmap">🗺 انتخاب موقعیت — select on map *</div></div>
+    <p class="error" id="st-addr-err" role="alert">نشانی و موقعیت روی نقشه الزامی است — both required (AC-2)</p>
+    <div class="flex"><button class="primary">ثبت — Register</button></div>
+  </section>
+
+  <!-- S5 STUDENT EDIT (reworked: stored sex + AC-4 mismatch rejection — UX-OQ-26) -->
+  <section class="screen" id="S5">
+    <span class="role">مدیر — administrator</span>
+    <h2>ویرایش دانش‌آموز — Edit student (US-02 AC-4, V4-09)</h2>
+    <p class="gloss">**UX-OQ-26 ruling (PO, 2026-09-05):** the student's sex is **stored-and-validated** (D-30) — independent of the school selection. On school change, if the stored sex differs from the new school's sex, the **AC-4 rejection is shown with the mismatch message** and save is disabled (fail-closed, F2/F16 fixed). A shift of the new school must be selected (AC-6).</p>
+    <div class="row">
+      <div><label for="s5-name">نام دانش‌آموز — name</label><input id="s5-name" value="زهرا رضایی" disabled></div>
+      <div><label for="s5-school">مدرسه — school (change to re-trigger validation)</label><select id="s5-school" onchange="s5SchoolChange()">
+        <option value="د.فردوسی (دخترانه)">د.فردوسی (دخترانه)</option>
+        <option value="د.خیام (پسرانه)">د.خیام (پسرانه)</option>
+      </select></div>
+    </div>
+    <div class="row">
+      <div><label for="s5-sex">جنسیت — sex: ارزش ثبت‌شدهٔ دانش‌آموز (مستقل از مدرسه، D-30) — stored sex, independent of school</label><input id="s5-sex" value="دخترانه girls" disabled></div>
+      <div><label for="s5-shift">شیفت — shift (only the new school's shifts)</label><select id="s5-shift"></select></div>
+    </div>
+    <p class="error" id="s5-sex-err" role="alert">جنسیت ثبت‌شدهٔ دانش‌آموز (دخترانه) با جنسیت مدرسهٔ جدید (پسرانه) مغایر است — تغییر رد شد (AC-4/AC-5: stored sex must equal the new school's sex)</p>
+    <p class="error" id="s5-shift-err" role="alert">شیفت معتبر مدرسهٔ جدید لازم است — valid new-school shift required (AC-6), reject</p>
+    <div class="flex"><button class="primary" id="s5-save">ذخیره — Save</button><button>انصراف — Cancel</button></div>
+  </section>
+
+  <!-- S6 DRIVER REGISTRY + NEW DRIVER FORM -->
+  <section class="screen" id="S6">
+    <span class="role">مدیر — administrator</span>
+    <h2>رانندگان — Drivers (US-03)</h2>
+    <p class="gloss">**Driver registry list** (AC-3: each driver keeps their own capacity) + register-driver form: capacity, origin (home, D-24), vehicle identity (plate/model/color, D-15), sex (D-29), service areas (predefined zones, D-43), availability per shift+direction, school-agnostic (D-35). Row actions open S7 (AC-4/7/8).</p>
+    <h4>فهرست رانندگان — driver registry (AC-3)</h4>
+    <table>
+      <tr><th>نام</th><th>ظرفیت capacity</th><th>جنسیت</th><th>مناطق خدمتی</th><th>دسترسی (شیفت/جهت)</th><th>عملیات</th></tr>
+      <tr><td>اکبر قاسمی</td><td>8</td><td>مذکر male</td><td>منطقه ۱، ۲</td><td>07:00–13:00 به م</td><td><button onclick="switchTo('S7')">مشاهده پرونده — View record (S7)</button></td></tr>
+      <tr><td>مریم احمدی</td><td>8</td><td>مونث female</td><td>منطقه ۱، ۲</td><td>07:00–12:00 به م + از م</td><td><button onclick="switchTo('S7')">مشاهده پرونده — View record (S7)</button></td></tr>
+      <tr><td>رضا مهدوی</td><td>8</td><td>مذکر male</td><td>منطقه ۱، ۳</td><td>12:00–19:00 به م + از م</td><td><button onclick="switchTo('S7')">مشاهده پرونده — View record (S7)</button></td></tr>
+    </table>
+    <div class="empty">(حالت خالی فهرست — empty state: when the registry is empty, this card replaces the table)</div>
+    <hr>
+    <h4>ثبت راننده جدید — New driver</h4>
+    <div class="row">
+      <div><label>نام — name *</label><input placeholder="مثال: اکبر قاسمی"></div>
+      <div><label>ظرفیت — capacity * (positive)</label><input type="number" min="1" value="8"></div>
+      <div><label>جنسیت — sex *</label><select><option>مذکر male</option><option>مونث female</option></select></div>
+    </div>
+    <div class="row">
+      <div><label>مبدا (نشانی منزل راننده) — origin: home address *</label><input placeholder="نشانی منزل"></div>
+      <div class="mockmap">🗺 انتخاب موقعیت روی نقشه — select on map *</div>
+    </div>
+    <div class="row">
+      <div><label>پلاک — plate *</label><input placeholder="۱۲ ب ۳۴۵"></div>
+      <div><label>مدل — model *</label><input placeholder="پژو ۲۰۶"></div>
+      <div><label>رنگ — color *</label><input placeholder="سفید"></div>
+    </div>
+    <div><label>مناطق خدمتی — service areas * (multi-select predefined zones, D-43)</label>
+      <select multiple size="3"><option>منطقه ۱ — Zone 1</option><option>منطقه ۲ — Zone 2</option><option>منطقه ۳ — Zone 3</option></select>
+    </div>
+    <div class="card">
+      <h4>دسترسی شیفت — availability (DriverShift entries) — no school is named (D-35)</h4>
+      <table>
+        <tr><th>شیفت shift</th><th>به مدرسه to-school</th><th>از مدرسه from-school</th><th>پنجرهٔ خدمت مشتق‌شده derived service window (شروع…پایان, AC-12/D-42)</th><th>پنجرهٔ رزرو بافرشده buffered [S−T, E+T] (اطلاعات تکمیلی، نه خود پنجره — F12)</th></tr>
+        <tr><td>07:00–12:00</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td>07:00–12:00</td><td><span class="hint">[06:30، 12:30] ±T=30</span></td></tr>
+        <tr><td>12:00–19:00</td><td><input type="checkbox"></td><td><input type="checkbox"></td><td>12:00–19:00</td><td><span class="hint">[11:30، 19:30]</span></td></tr>
+      </table>
+      <p class="error" role="alert">حداقل یک جهت لازم است — at least one direction per entry (AC-11) · حداقل یک شیفت — one shift (AC-13)</p>
+      <p class="warn">AC-14 demo (state is VALID — F6 fixed): only 07:00–12:00 is selected here, so nothing is rejected. Selecting **both** 07:00–12:00 and 12:00–19:00 would fail: buffered windows [06:30,12:30] ∩ [11:30,19:30] intersect and the demo schools share **no common adopting school** → «تداخل زمانی شیفت‌ها — رد می‌شود (AC-14(ii)/CR-26(ii))». If they shared a school, it would save with the warning «این دو شیفت تنها در صورت تخصیص به یک مدرسه مشترک سازگارند» (AC-14(iii)).</p>
+    </div>
+    <div class="flex"><button class="primary">ثبت — Save driver</button></div>
+  </section>
+
+  <!-- S7 DRIVER RECORD / EDIT -->
+  <section class="screen" id="S7">
+    <span class="role">مدیر — administrator</span>
+    <h2>پرونده راننده — Driver record (US-03 AC-4/7/8)</h2>
+    <p class="gloss">View/edit driver record: capacity guard with **current assignment count on the approved/published plan** (AC-7, D-20 — F14 fixed), identity edit after publication (AC-8, D-25), no school pre-assigned (AC-4, D-35).</p>
+    <div class="row">
+      <div><label>نام — name</label><input value="اکبر قاسمی" disabled></div>
+      <div><label>ظرفیت — capacity (AC-7)</label><input type="number" min="1" value="8"></div>
+      <div><label>جنسیت — sex</label><input value="مذکر male" disabled></div>
+    </div>
+    <p class="warn">تخصیص فعلی روی برنامهٔ منتشرشده — current assignment count on approved/published plan: <b>۷ دانش‌آموز</b> (2026-08-20). AC-7 (D-20): capacity may not drop below this count — «ظرفیت نمی‌تواند کمتر از تعداد تخصیص فعلی باشد»; the edit is rejected and the existing capacity stays.</p>
+    <div class="row">
+      <div><label>پلاک — plate (AC-8: editable after publication)</label><input value="۱۲ ب ۳۴۵"></div>
+      <div><label>مدل — model</label><input value="پژو ۲۰۶"></div>
+      <div><label>رنگ — color</label><input value="سفید"></div>
+    </div>
+    <div><label>مبدا — origin (home address) *</label><input value="خیابان ولیعصر، کوچهٔ ۵"></div>
+    <div><label>مناطق خدمتی — service areas *</label><select multiple size="2"><option selected>منطقه ۱ — Zone 1</option><option selected>منطقه ۲ — Zone 2</option></select></div>
+    <p class="hint">AC-4: no school is shown pre-assigned — matching decides runs per school (D-35). AC-8 (D-25): identity edits after publication reflect on the parent view (S12) on next load.</p>
+    <div class="flex"><button class="primary">ذخیره — Save</button><button>بازگشت — Back</button></div>
+  </section>
+
+  <!-- S8 MATCHING -->
+  <section class="screen" id="S8">
+    <span class="role">مدیر — administrator</span>
+    <h2>تطبیق سالانه — Annual matching (US-04)</h2>
+    <p class="gloss">Trigger runs matching; runs once/twice a year; NFR-01 hours (overnight OK — D-21). UX-OQ-24: multi-hour run UX is open.</p>
+    <div class="card">
+      <div class="flex">
+        <button class="primary">اجرای تطبیق — Run matching</button>
+        <span class="hint">آخرین اجرا: 2026-08-20 ✓ نشر شد</span>
+      </div>
+      <p class="warn">Run takes up to 3h (goal) — you can leave this page; result will be ready in «گزارشها» when done. (cofirmed by PO? — UX-OQ-24 open)</p>
+      <h4>تاریخچه — run log</h4>
+      <table>
+        <tr><th>اجرا</th><th>وضعیت</th><th>مدت</th></tr>
+        <tr><td>2026-08-20</td><td><span class="tag ok">نشر شد published</span></td><td>2h 05m</td></tr>
+        <tr><td>2026-08-19</td><td><span class="tag danger">ناکام failed — CR-18</span></td><td>1h 40m</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- S9 REPORT (reworked per UX-OQ-25: paginated assignments + drill-down; flagged marked in BOTH views) -->
+  <section class="screen" id="S9">
+    <span class="role">مدیر — administrator</span>
+    <h2>گزارش تطبیق — Matching report (US-04/US-05)</h2>
+    <p class="gloss">**UX-OQ-25 ruling (PO, 2026-09-05):** report = **paginated list of all assignments + drill-down to an individual assignment** («visible for review» per US-05 AC-1); **flagged/excluded students are marked in BOTH the summary and the drill-down** (US-04 AC-1, US-09 AC-1). Capacity per direction (AC-2); one school per run + CR-26 (AC-3); per-direction totals + optimality evidence (AC-5); unallocated availability (AC-12, D-40). Demo data is capacity- and CR-26-consistent (F6 fixed).</p>
+    <div class="card"><h4>خلاصه — summary (flagged/excluded marked here too — UX-OQ-25)</h4>
+      <table>
+        <tr><th>مدرسه</th><th>شیفت</th><th>جهت</th><th>دانش‌آموزان</th><th>راننده</th><th>فاصله کل</th><th>عملیات</th></tr>
+        <tr><td>د.فردوسی</td><td>07:00–12:00</td><td>به م</td><td>6</td><td>ر. احمدی (ظرفیت 8)</td><td>96 km</td><td><button onclick="s9DrillRun('د.فردوسی|07:00–12:00|به م')">مشاهده تخصیص‌ها — view assignments</button></td></tr>
+        <tr><td>د.فردوسی</td><td>07:00–12:00</td><td>از م</td><td>6</td><td>ر. احمدی (ظرفیت 8)</td><td>88 km</td><td><button onclick="s9DrillRun('د.فردوسی|07:00–12:00|از م')">مشاهده تخصیص‌ها — view assignments</button></td></tr>
+        <tr><td>د.خیام</td><td>07:00–13:00</td><td>به م</td><td>7</td><td>ر. قاسمی (ظرفیت 8)</td><td>112 km</td><td><button onclick="s9DrillRun('د.خیام|07:00–13:00|به م')">مشاهده تخصیص‌ها — view assignments</button></td></tr>
+        <tr><td>د.خیام</td><td>12:00–19:00</td><td>به م</td><td>2</td><td>ر. مهدوی (ظرفیت 8)</td><td>34 km</td><td><button onclick="s9DrillRun('د.خیام|12:00–19:00|به م')">مشاهده تخصیص‌ها — view assignments</button></td></tr>
+        <tr><td>د.خیام</td><td>12:00–19:00</td><td>از م</td><td>3</td><td>ر. مهدوی (ظرفیت 8)</td><td>47 km</td><td><button onclick="s9DrillRun('د.خیام|12:00–19:00|از م')">مشاهده تخصیص‌ها — view assignments</button></td></tr>
+        <tr><td><span class="tag danger">مستثنی flagged</span> مستثنی‌شدگان</td><td>—</td><td>—</td><td>1</td><td>سرینا محمودی</td><td>—</td><td><button onclick="s9DrillRun('excluded')">جزئیات — drill-down</button></td></tr>
+      </table>
+      <p class="hint">گواهی بهینگی: zero gap proven (D-22) — shown for at-scale runs. Per-direction total distances above (AC-1/AC-5).</p>
+    </div>
+    <div class="card"><h4>تخصیص‌نشده‌ها — unallocated availability (AC-12)</h4>
+      <p class="hint">(AC-12, D-40) If a driver has a selected (shift, direction) entry the run did not allocate, it is listed here — selection is capability, not obligation, so no error is raised. [If none, this card reads «هیچ تخصیص‌نشده‌ای — no unallocated availability».]</p>
+    </div>
+    <div class="card">
+      <h4>لیست تخصیص‌ها — assignments (پیمایشی paginated + drill-down, UX-OQ-25)</h4>
+      <p class="hint" id="s9-range">نمایش ۱–۶ از ۲۵ — showing 1–6 of 25</p>
+      <table>
+        <thead><tr><th>دانش‌آموز</th><th>مدرسه</th><th>شیفت</th><th>جهت</th><th>راننده</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+        <tbody id="s9-body"></tbody>
+      </table>
+      <div class="pager">
+        <button id="s9-prev" onclick="s9Turn(-1)">قبلی — prev</button>
+        <span id="s9-page" class="hint">صفحه ۱ از ۵ — page 1 of 5</span>
+        <button id="s9-next" onclick="s9Turn(1)">بعدی — next</button>
+        <span class="hint">در مقیاس کامل NFR-01 (۵۰۰ دانش‌آموز) همین فهرست صفحه‌بندی/فیلتر می‌شود — pagination + filters at scale.</span>
+      </div>
+    </div>
+    <div class="card">
+      <h4>جزئیات تخصیص — assignment drill-down (flagged/excluded marked here too — UX-OQ-25)</h4>
+      <div id="s9-detail" class="hint">ردیفی از فهرست را برای جزئیات انتخاب کنید — select an assignment (or the excluded student) to drill down.</div>
+    </div>
+    <div class="empty">گزارش خالی — degenerate run (AC-8): zero students / zero drivers / all flagged → this empty-report card is shown, **no failure raised** (F9 fixed).</div>
+    <div class="flex"><button class="primary" onclick="switchTo('S11')">بررسی و تایید — Review &amp; approve (S11)</button><button>خروجی — Export</button></div>
+  </section>
+
+  <!-- S10 FAILURE -->
+  <section class="screen" id="S10">
+    <span class="role">مدیر — administrator</span>
+    <h2>گزارش شکست — Failure report (CR-18 / US-04 AC-6…11)</h2>
+    <p class="gloss">No partial plan is publishable; complete failure data required. Remedies: add eligible drivers + re-run (supply) or flag students (demand, only if all affected flagged — V4-11).</p>
+    <div class="card">
+      <h4>دانش‌آموزان تخصیص‌نیافته — unassigned students</h4>
+      <table>
+        <tr><th>دانش‌آموز</th><th>مدرسه / شیفت / جهت</th><th>علت cause</th></tr>
+        <tr><td>س. محمودی</td><td>د.خیام / 12:00–19:00 / از م</td><td><span class="tag danger">بیش از ظرفیت capacity</span></td></tr>
+        <tr><td>م. کریمی</td><td>د.خیام / 12:00–19:00 / از م</td><td><span class="tag danger">خارج از منطقه area</span></td></tr>
+        <tr><td>ف. صادقی</td><td>د.فردوسی / 07:00–12:00 / به م</td><td><span class="tag danger">جنسیت gender (male driver cover only)</span></td></tr>
+      </table>
+      <p class="hint">کمبود به تفکیک: school/shift/direction totals with gender/area/time causes (CR-18) — blocked assignments listed separately.</p>
+    </div>
+    <div class="flex">
+      <button class="primary">+ راننده جدید — Add eligible driver (re-run)</button>
+      <button>پرچم دانش‌آموزان — Flag students (US-09 path)</button>
+    </div>
+    <p class="hint">Note: no failure-report export — export channels (CR-10) cover published assignments only (F15 fixed).</p>
+  </section>
+
+  <!-- S11 APPROVE -->
+  <section class="screen" id="S11">
+    <span class="role">مدیر — administrator</span>
+    <h2>تایید و انتشار — Review &amp; approve (US-05)</h2>
+    <p class="gloss">publish gate: nothing final before approve; parents/drivers see nothing until published (AC-2).</p>
+    <div class="card">
+      <h4>بررسی — review checklist</h4>
+      <ul class="step">
+        <li><b>AC-1</b> — every assignment visible via the paginated list + drill-down on S9 (student, driver, school, shift, direction) + per-direction totals; flagged/excluded marked in both views</li>
+        <li><b>AC-5/AC-4</b> — failure runs: full data shown, publication blocked</li>
+        <li><b>D-27</b> — registry changed since run? → approve blocked with message</li>
+      </ul>
+      <p class="warn" id="s11-warn">«گزارش دیگر با ثبت همخوانی ندارد — re-run or tweak or revert required» (D-27 approve block)</p>
+    </div>
+    <div class="flex"><button class="primary">انتشار — Publish</button><button>خروجی — Export (both channels: dashboard + file, CR-10)</button></div>
+  </section>
+
+  <!-- S12 PARENT -->
+  <section class="screen" id="S12">
+    <span class="role">والد — parent/guardian</span>
+    <h2>داشبورد والد — Parent dashboard (US-08)</h2>
+    <p class="gloss">Primary need: driver/vehicle identity (D-02). Per child: name, school, shift, driver per direction, vehicle identity — plate/model/color (D-15). No assignment info if not published (AC-3 — empty state rendered below).</p>
+    <div class="card">
+      <h4>زهرا رضایی — class 4 · دبیرستان ن.فردوسی · شیفت 07:00–12:00</h4>
+      <table>
+        <tr><th></th><th>راننده driver</th><th>وسیله vehicle</th></tr>
+        <tr><td><b>به مدرسه</b> to-school</td><td>مریم احمدی</td><td>۱۵ ج ۷۸ — پژو ۴۰۵ — مشکی</td></tr>
+        <tr><td><b>از مدرسه</b> from-school</td><td>مریم احمدی</td><td>۱۵ ج ۷۸ — پژو ۴۰۵ — مشکی</td></tr>
+      </table>
+      <p class="hint">Same driver AM/PM shown when applicable (D-45 continuity preference — never overrides distance).</p>
+    </div>
+    <div class="card">
+      <h4>علی رضایی — class 2 · دبیرستان ا.خیام · شیفت 07:00–13:00</h4>
+      <table>
+        <tr><td><b>به مدرسه</b></td><td>اکبر قاسمی</td><td>۱۲ ب ۳۴۵ — پژو ۲۰۶ — سفید</td></tr>
+        <tr><td><b>از مدرسه</b></td><td>اکبر قاسمی</td><td>۱۲ ب ۳۴۵ — پژو ۲۰۶ — سفید</td></tr>
+      </table>
+      <p class="hint">Two children on different drivers — shown separately (AC-4, A-06).</p>
+    </div>
+    <div class="empty">هنوز منتشر نشده — not published yet (AC-3): until the report is approved (S11), **no assignment information is shown** — this card replaces the assignment cards (F9 fixed).</div>
+    <div class="flex"><button>خروجی — Export (same info, AC-2)</button></div>
+  </section>
+
+  <!-- S13 PARENT PENDING -->
+  <section class="screen" id="S13">
+    <span class="role">والد — parent/guardian</span>
+    <h2>حساب والد — Parent account state (US-08 AC-5…7)</h2>
+    <p class="gloss">Auto-created accounts active on first sign-in (AC-5). Registration-request accounts active after admin accepts — **S17 (admin queue)** (AC-6, CR-20/D-14). Pending ⇒ no assignment info (AC-7). UX-OQ-12 (credential delivery) open.</p>
+    <div class="card">
+      <h4>درخواست در انتظار تایید — registration pending</h4>
+      <p class="hint">وضعیت: در انتظار پذیرش مدیر — status: awaiting admin acceptance (queue on S2/S17). No assignment information is shown until active (AC-7).</p>
+    </div>
+    <div class="card">
+      <h4>فعال — active (auto-created / accepted via S17)</h4>
+      <p class="hint">→ view assignments (S12) · credentials delivered via school — «how?» = OQ-12 (open).</p>
+    </div>
+  </section>
+
+  <!-- S14 DRIVER -->
+  <section class="screen" id="S14">
+    <span class="role">راننده — driver</span>
+    <h2>فهرست راننده — Driver roster (US-07)</h2>
+    <p class="gloss">Per shift per direction: to-school = pickup order + pickup times; from-school = one departure time + drop-off order + times (D-39). Times informational (A-07). Only your rosters (NFR-04). Pre-publication: no roster shown (US-05 AC-2 gate).</p>
+    <div class="card">
+      <h4>شیفت 07:00–12:00 · به مدرسه — to-school</h4>
+      <table>
+        <tr><th>ترتیب order</th><th>دانش‌آموز</th><th>نشانی</th><th>زمان پیک‌آپ pickup time</th></tr>
+        <tr><td>1</td><td>سارا محمودی</td><td>...</td><td>07:05</td></tr>
+        <tr><td>2</td><td>زهرا رضایی</td><td>...</td><td>07:18</td></tr>
+        <tr><td>3</td><td>نرگس مهدوی</td><td>...</td><td>07:31</td></tr>
+      </table>
+      <p class="hint">All times informational (A-07).</p>
+    </div>
+    <div class="card">
+      <h4>شیفت 07:00–12:00 · از مدرسه — from-school</h4>
+      <table>
+        <tr><th>خروج از مدرسه</th><th>— school departure</th></tr>
+        <tr><td>12:00</td><td>(shift end — A-02)</td></tr>
+      </table>
+      <table>
+        <tr><th>ترتیب drop-off order</th><th>دانش‌آموز</th><th>زمان تخلیه drop-off time</th></tr>
+        <tr><td>1</td><td>زهرا رضایی</td><td>12:22</td></tr>
+        <tr><td>2</td><td>سارا محمودی</td><td>12:40</td></tr>
+      </table>
+    </div>
+    <div class="empty">فهرست خالی — empty roster (AC-4): no students assigned to you in this run → this friendly empty state is shown; **other drivers' students are never shown** (NFR-04, F9 fixed).</div>
+    <p class="warn">AC-3: if you serve only to-school of a shift, only that roster shows — no from-school fabricated.</p>
+    <div class="flex"><button>خروجی — Export roster (same content, AC-2)</button></div>
+  </section>
+
+  <!-- S15 TWEAK -->
+  <section class="screen" id="S15">
+    <span class="role">مدیر — administrator (informational — US-06 is Should, out of MVP)</span>
+    <h2>تعدیل تکالیف — Tweak assignments (US-06 — sketch only)</h2>
+    <p class="gloss">Scope per tweak: to-school only / from-school only / both (default) — D-48. Validated per direction (D-47, D-34, CR-21/22/26). Applies immediately (CR-11).</p>
+    <div class="card">
+      <div class="row">
+        <div><label>دانش‌آموز — student</label><select><option>زهرا رضایی (د.فردوسی 07:00–12:00)</option></select></div>
+        <div><label>راننده هدف — target driver</label><select><option>ر. قاسمی (ظرفیت 8)</option><option>ر. احمدی (ظرفیت 8)</option></select></div>
+        <div><label>دامنه جهت — direction scope (D-48)</label><select><option>هر دو both (default)</option><option>تنها به مدرسه</option><option>تنها از مدرسه</option></select></div>
+      </div>
+      <p class="warn">Validation: target driver eligibility (selection-based D-47), per-direction capacity (D-34), whole-day CR-26 — reject if any fails; out-of-scope untouched (AC-5).</p>
+      <p class="hint">Saves immediately; parent (S12) and rosters (S14) update on next view (CR-11). OQ-10/OQ-11 (re-run vs published plan; mid-year propagation) — open.</p>
+    </div>
+    <div class="flex"><button class="primary">ذخیره — Save</button><button>انصراف — Cancel</button></div>
+  </section>
+
+  <!-- S16 SCHOOL EDIT (F1 fixed — US-01 AC-4) -->
+  <section class="screen" id="S16">
+    <span class="role">مدیر — administrator</span>
+    <h2>ویرایش مدرسه — Edit school (US-01 AC-4)</h2>
+    <p class="gloss">Reached from the S3 list row **ویرایش (Edit)**. Change name / address+map; **shift rows add/remove** with the same validation as the register form (AC-2/AC-5/AC-6 reusable). **Sex read-only** (single-gender; a change would ripple student re-validation — out of AC-4 scope). The change takes effect at the **next** matching run (AC-4).</p>
+    <div class="row">
+      <div><label for="sf-name">نام مدرسه — name *</label><input id="sf-name" value="دبیرستان ن.فردوسی"></div>
+      <div><label for="sf-sex">جنسیت — sex (read-only)</label><input id="sf-sex" value="دخترانه girls" disabled></div>
+    </div>
+    <div><label for="sf-addr">نشانی — address *</label><input id="sf-addr" value="خیابان آزادی، کوچهٔ ۱۲" aria-describedby="sf-map-err"></div>
+    <div class="mockmap">🗺 نقشه ساده — simple map <br><button id="sf-map-btn" onclick="selectMap('sf-map-btn')">انتخاب موقعیت روی نقشه — Select on map *</button></div>
+    <p class="error" id="sf-map-err" role="alert">نشانی و موقعیت روی نقشه الزامی است — address and coordinates required (AC-5)</p>
+    <div><label>شیفت‌ها — shifts (at least one) *</label>
+      <div id="sf-shifts">
+        <div class="shift-row">
+          <div><label>شروع — start</label><input type="time" value="07:00" aria-label="shift start"></div>
+          <div><label>پایان — end</label><input type="time" value="12:00" aria-label="shift end"></div>
+          <button type="button" onclick="removeShift(this)" data-c="sf-shifts" data-cerr="sf-shift-err">حذف — remove</button>
+        </div>
+      </div>
+      <button type="button" onclick="addShift('sf-shifts','sf-shift-err')">+ شیفت دیگر — add shift</button>
+    </div>
+    <p class="error" id="sf-shift-err" role="alert">حداقل یک شیفت لازم است — at least one shift required (AC-2)</p>
+    <p class="hint">AC-4: the saved change is used by the **next** matching run. If a plan is already published, the shift change can make published rosters stale — OQ-10 input (open, PO only).</p>
+    <div class="flex"><button class="primary" onclick="validateSchoolEdit()">ذخیره — Save changes</button><button>انصراف — Cancel</button></div>
+  </section>
+
+  <!-- S17 PARENT REQUESTS (F5 fixed — US-08 AC-6) -->
+  <section class="screen" id="S17">
+    <span class="role">مدیر — administrator</span>
+    <h2>درخواست‌های والدین — Parent registration requests (US-08 AC-6, CR-20/D-14)</h2>
+    <p class="gloss">Reached from S2 (parents-request queue badge). Accept → account becomes active and the parent can view assignments (AC-6); reject → request is removed. Accept/reject are recorded, no partial state (NFR-09).</p>
+    <table>
+      <tr><th>والد parent</th><th>دانش‌آموز child</th><th>مدرسه</th><th>تاریخ درخواست</th><th>وضعیت</th><th>عملیات</th></tr>
+      <tr><td>مریم رضایی</td><td>زهرا رضایی</td><td>د.فردوسی</td><td>2026-09-03</td><td><span class="tag warn">در انتظار pending</span></td><td><button class="primary">تایید — Accept</button> <button>رد — Reject</button></td></tr>
+      <tr><td>حسین کریمی</td><td>م. کریمی</td><td>د.خیام</td><td>2026-09-04</td><td><span class="tag warn">در انتظار</span></td><td><button class="primary">تایید</button> <button>رد</button></td></tr>
+      <tr><td>سمیرا نادری</td><td>ف. نادری</td><td>د.فردوسی</td><td>2026-09-05</td><td><span class="tag warn">در انتظار</span></td><td><button class="primary">تایید</button> <button>رد</button></td></tr>
+    </table>
+    <div class="empty">هیچ درخواستی در انتظار نیست — no pending requests (rendered when the queue is empty)</div>
+    <p class="hint">Accepted accounts become active (S13 «فعال») and can view assignments; credential delivery = OQ-12 (open). Parents with unaccepted requests can sign in but see no assignment info (AC-7).</p>
+    <div class="flex"><button>بازگشت — Back (S2)</button></div>
+  </section>
+</main>
+
+<script>
+  // screen switching (keyboard-accessible: buttons are real <button>)
+  document.querySelectorAll('.screen-switch button').forEach(b=>{
+    b.addEventListener('click',()=>switchTo(b.dataset.s));
+  });
+  function switchTo(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.screen-switch button').forEach(b=>b.classList.toggle('active',b.dataset.s===id));
+  }
+
+  // ---- S3 / S16 shared shift-row helpers (F8: AC-2 now demonstrable; F10: aria) ----
+  function addShift(cid,cerr){
+    const box=document.createElement('div');
+    box.className='shift-row';
+    box.innerHTML='<div><label>شروع — start</label><input type="time" value="08:00" aria-label="shift start"></div>'+
+      '<div><label>پایان — end</label><input type="time" value="13:00" aria-label="shift end"></div>'+
+      '<button type="button" onclick="removeShift(this)" data-c="'+cid+'" data-cerr="'+cerr+'">حذف — remove</button>';
+    document.getElementById(cid).appendChild(box);
+    document.getElementById(cerr).classList.remove('show');
+  }
+  function removeShift(btn){
+    btn.closest('.shift-row').remove();
+    const c=document.getElementById(btn.dataset.c);
+    if(c.querySelectorAll('.shift-row').length===0){
+      document.getElementById(btn.dataset.cerr).classList.add('show');
+    }
+  }
+  function selectMap(btnId){
+    const b=document.getElementById(btnId);
+    b.dataset.selected='1';
+    b.textContent='موقعیت انتخاب شد ✓ — location selected';
+  }
+  function hasMap(btnId){ return document.getElementById(btnId).dataset.selected==='1'; }
+
+  function validateSchool(){
+    const name=document.getElementById('sc-name').value.trim();
+    const sex=document.getElementById('sc-sex').value;
+    const addr=document.getElementById('sc-addr').value.trim();
+    const map=hasMap('sc-map-btn');
+    const mapErr=document.getElementById('sc-map-err');
+    const shiftErr=document.getElementById('sc-shift-err');
+    const sexErr=document.getElementById('sc-sex-err');
+    sexErr.classList.toggle('show',!sex);
+    shiftErr.classList.toggle('show',document.querySelectorAll('#sc-shifts .shift-row').length===0); // AC-2
+    if(!addr&&!map){ mapErr.textContent='نشانی و موقعیت روی نقشه الزامی است — address AND coordinates required (AC-5)'; mapErr.classList.add('show'); }
+    else if(!addr){ mapErr.textContent='نشانی الزامی است — address missing (AC-5 names the missing component)'; mapErr.classList.add('show'); }
+    else if(!map){ mapErr.textContent='موقعیت روی نقشه الزامی است — coordinates missing (AC-5 names the missing component)'; mapErr.classList.add('show'); }
+    else { mapErr.classList.remove('show'); }
+    if(!name||!sex){ if(!sex)sexErr.classList.add('show'); return; }
+    if(!addr||!map) return;
+    if(document.querySelectorAll('#sc-shifts .shift-row').length===0) return;
+    alert('ثبت موفق — school registered (AC-1)');
+  }
+  function validateSchoolEdit(){
+    const name=document.getElementById('sf-name').value.trim();
+    const addr=document.getElementById('sf-addr').value.trim();
+    const map=hasMap('sf-map-btn');
+    const mapErr=document.getElementById('sf-map-err');
+    const shiftErr=document.getElementById('sf-shift-err');
+    shiftErr.classList.toggle('show',document.querySelectorAll('#sf-shifts .shift-row').length===0);
+    if(!addr&&!map){ mapErr.textContent='نشانی و موقعیت روی نقشه الزامی است — address AND coordinates required (AC-5)'; mapErr.classList.add('show'); }
+    else if(!addr){ mapErr.textContent='نشانی الزامی است — address missing'; mapErr.classList.add('show'); }
+    else if(!map){ mapErr.textContent='موقعیت روی نقشه الزامی است — coordinates missing'; mapErr.classList.add('show'); }
+    else { mapErr.classList.remove('show'); }
+    if(!name) return;
+    if(document.querySelectorAll('#sf-shifts .shift-row').length===0) return;
+    alert('ذخیره شد — school updated; next matching run uses the new shift times (AC-4). OQ-10 (already-published plan) stays open.');
+  }
+
+  // ---- S5 student edit (UX-OQ-26: stored-and-validated sex + AC-4 mismatch rejection) ----
+  const S5_SEX={'د.فردوسی (دخترانه)':'دخترانه','د.خیام (پسرانه)':'پسرانه'};
+  const S5_SHIFTS={'د.فردوسی (دخترانه)':['07:00–12:00'],'د.خیام (پسرانه)':['07:00–13:00','12:00–19:00']};
+  const S5_STORED='دخترانه'; // زهرا رضایی — stored at registration, independent of school
+  function s5SchoolChange(){
+    const sel=document.getElementById('s5-school');
+    const shift=document.getElementById('s5-shift');
+    const save=document.getElementById('s5-save');
+    const sexErr=document.getElementById('s5-sex-err');
+    const newSex=S5_SEX[sel.value];
+    // populate the new school's shift list (AC-6: only the new school's shifts)
+    shift.innerHTML='';
+    S5_SHIFTS[sel.value].forEach(s=>{ const o=document.createElement('option'); o.textContent=s; shift.appendChild(o); });
+    if(newSex!==S5_STORED){
+      // AC-4/AC-5 rejection with the mismatch message — fail-closed
+      sexErr.classList.add('show');
+      save.disabled=true;
+      shift.disabled=true;
+    } else {
+      sexErr.classList.remove('show');
+      save.disabled=false;
+      shift.disabled=false;
+    }
+  }
+  document.addEventListener('DOMContentLoaded',()=>{ document.getElementById('s5-shift').disabled=false; s5SchoolChange(); });
+
+  // ---- S9 report (UX-OQ-25: paginated assignments + drill-down; flagged marked in both views) ----
+  const ASSIGN=[
+    // د.فردوسی 07:00–12:00 به م — ر. احمدی (F6: capacity/CR-26 consistent demo data)
+    {stu:'سارا محمودی',school:'د.فردوسی',shift:'07:00–12:00',dir:'به م',drv:'ر. احمدی',time:'07:05',excl:false},
+    {stu:'زهرا رضایی',school:'د.فردوسی',shift:'07:00–12:00',dir:'به م',drv:'ر. احمدی',time:'07:18',excl:false},
+    {stu:'نرگس مهدوی',school:'د.فردوسی',shift:'07:00–12:00',dir:'به م',drv:'ر. احمدی',time:'07:31',excl:false},
+    {stu:'مریم کاظمی',school:'د.فردوسی',shift:'07:00–12:00',dir:'به م',drv:'ر. احمدی',time:'07:44',excl:false},
+    {stu:'فاطمه نادری',school:'د.فردوسی',shift:'07:00–12:00',dir:'به م',drv:'ر. احمدی',time:'07:52',excl:false},
+    {stu:'الهام شریفی',school:'د.فردوسی',shift:'07:00–12:00',dir:'به م',drv:'ر. احمدی',time:'08:05',excl:false},
+    // د.فردوسی 07:00–12:00 از م — ر. احمدی
+    {stu:'زهرا رضایی',school:'د.فردوسی',shift:'07:00–12:00',dir:'از م',drv:'ر. احمدی',time:'12:22',excl:false},
+    {stu:'سارا محمودی',school:'د.فردوسی',shift:'07:00–12:00',dir:'از م',drv:'ر. احمدی',time:'12:40',excl:false},
+    {stu:'نرگس مهدوی',school:'د.فردوسی',shift:'07:00–12:00',dir:'از م',drv:'ر. احمدی',time:'12:48',excl:false},
+    {stu:'مریم کاظمی',school:'د.فردوسی',shift:'07:00–12:00',dir:'از م',drv:'ر. احمدی',time:'12:55',excl:false},
+    {stu:'فاطمه نادری',school:'د.فردوسی',shift:'07:00–12:00',dir:'از م',drv:'ر. احمدی',time:'13:06',excl:false},
+    {stu:'الهام شریفی',school:'د.فردوسی',shift:'07:00–12:00',dir:'از م',drv:'ر. احمدی',time:'13:15',excl:false},
+    // د.خیام 07:00–13:00 به م — ر. قاسمی
+    {stu:'علی رضایی',school:'د.خیام',shift:'07:00–13:00',dir:'به م',drv:'ر. قاسمی',time:'07:10',excl:false},
+    {stu:'حسین کریمی',school:'د.خیام',shift:'07:00–13:00',dir:'به م',drv:'ر. قاسمی',time:'07:22',excl:false},
+    {stu:'محمد صادقی',school:'د.خیام',shift:'07:00–13:00',dir:'به م',drv:'ر. قاسمی',time:'07:33',excl:false},
+    {stu:'امیر تهرانی',school:'د.خیام',shift:'07:00–13:00',dir:'به م',drv:'ر. قاسمی',time:'07:41',excl:false},
+    {stu:'رضا موسوی',school:'د.خیام',shift:'07:00–13:00',dir:'به م',drv:'ر. قاسمی',time:'07:50',excl:false},
+    {stu:'بهرام کاشانی',school:'د.خیام',shift:'07:00–13:00',dir:'به م',drv:'ر. قاسمی',time:'08:02',excl:false},
+    {stu:'سعید جعفری',school:'د.خیام',shift:'07:00–13:00',dir:'به م',drv:'ر. قاسمی',time:'08:14',excl:false},
+    // د.خیام 12:00–19:00 به م — ر. مهدوی
+    {stu:'پیمان رستمی',school:'د.خیام',shift:'12:00–19:00',dir:'به م',drv:'ر. مهدوی',time:'13:02',excl:false},
+    {stu:'کیان یزدی',school:'د.خیام',shift:'12:00–19:00',dir:'به م',drv:'ر. مهدوی',time:'13:15',excl:false},
+    // د.خیام 12:00–19:00 از م — ر. مهدوی
+    {stu:'پیمان رستمی',school:'د.خیام',shift:'12:00–19:00',dir:'از م',drv:'ر. مهدوی',time:'18:12',excl:false},
+    {stu:'کیان یزدی',school:'د.خیام',shift:'12:00–19:00',dir:'از م',drv:'ر. مهدوی',time:'18:30',excl:false},
+    {stu:'ارسلان قنبری',school:'د.خیام',shift:'12:00–19:00',dir:'از م',drv:'ر. مهدوی',time:'18:44',excl:false},
+    // flagged/excluded — appears in list AND drill-down marked excluded (UX-OQ-25; US-09 AC-1)
+    {stu:'سرینا محمودی',school:'د.خیام',shift:'12:00–19:00',dir:'—',drv:'—',time:'—',excl:true}
+  ];
+  const S9_PAGE_SIZE=6;
+  let s9Page=1, s9Filter=null;
+  function s9Filtered(){ return s9Filter==='excluded' ? ASSIGN.filter(a=>a.excl) : s9Filter ? ASSIGN.filter(a=>!a.excl && (a.school+'|'+a.shift+'|'+a.dir)===s9Filter) : ASSIGN; }
+  function s9Render(){
+    const rows=s9Filtered(); const pages=Math.max(1,Math.ceil(rows.length/S9_PAGE_SIZE));
+    if(s9Page>pages) s9Page=pages; if(s9Page<1) s9Page=1;
+    const slice=rows.slice((s9Page-1)*S9_PAGE_SIZE,s9Page*S9_PAGE_SIZE);
+    const body=document.getElementById('s9-body'); body.innerHTML='';
+    slice.forEach(a=>{
+      const tr=document.createElement('tr');
+      const idx=ASSIGN.indexOf(a);
+      tr.innerHTML='<td>'+a.stu+'</td><td>'+a.school+'</td><td>'+a.shift+'</td><td>'+a.dir+'</td><td>'+(a.excl?'—':a.drv)+'</td>'+
+        '<td>'+(a.excl?'<span class="tag danger">مستثنی excluded</span>':'<span class="tag ok">تخصیص‌یافته assigned</span>')+'</td>'+
+        '<td><button onclick="s9Detail('+idx+')">جزئیات — details</button></td>';
+      body.appendChild(tr);
+    });
+    document.getElementById('s9-range').textContent='نمایش '+(rows.length? (s9Page-1)*S9_PAGE_SIZE+1 : 0)+'–'+Math.min(s9Page*S9_PAGE_SIZE,rows.length)+' از '+rows.length+' — showing';
+    document.getElementById('s9-page').textContent='صفحه '+s9Page+' از '+pages+' — page '+s9Page+' of '+pages;
+    document.getElementById('s9-prev').disabled=s9Page<=1;
+    document.getElementById('s9-next').disabled=s9Page>=pages;
+  }
+  function s9Turn(d){ s9Page+=d; s9Render(); }
+  function s9DrillRun(key){ s9Filter=key; s9Page=1; s9Render(); }
+  function s9Detail(idx){
+    const a=ASSIGN[idx];
+    const d=document.getElementById('s9-detail');
+    const VEH={'ر. احمدی':'۱۵ ج ۷۸ — پژو ۴۰۵','ر. قاسمی':'۱۲ ب ۳۴۵ — پژو ۲۰۶','ر. مهدوی':'۲۲ ق ۹۱۰ — پراید ۲۰۷'};
+    d.innerHTML='<table><tr><th>دانش‌آموز</th><td>'+a.stu+'</td></tr>'+
+      '<tr><th>مدرسه</th><td>'+a.school+'</td></tr>'+
+      '<tr><th>شیفت</th><td>'+a.shift+'</td></tr>'+
+      '<tr><th>جهت</th><td>'+(a.excl?'— (مستثنی)':a.dir)+'</td></tr>'+
+      '<tr><th>راننده</th><td>'+(a.excl?'—':a.drv+' (vehicle: '+VEH[a.drv]+')')+'</td></tr>'+
+      '<tr><th>زمان پیک‌آپ/تخلیه</th><td>'+(a.excl?'—':a.time)+'</td></tr>'+
+      '<tr><th>وضعیت</th><td>'+(a.excl?'<span class="tag danger">مستثنی excluded — flagged; not assigned to any driver (CR-19)</span>':'<span class="tag ok">تخصیص‌یافته assigned</span>')+'</td></tr></table>'+
+      '<p class="hint">Flagged/excluded students are marked in BOTH the summary and this drill-down view (UX-OQ-25 ruling; US-04 AC-1 / US-09 AC-1).</p>';
+  }
+  s9Render();
+</script>
+</body>
+</html>
