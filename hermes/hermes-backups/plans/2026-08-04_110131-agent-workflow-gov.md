@@ -7,6 +7,7 @@
 > **Updates:** 2026-08-04 — added Rule 6 (Spec-first / SDD) + spec-change path, named the Schema/Migration-owner role (§2), and added §8 ready-to-use `AGENTS.md` (the file that guides agents in every new session, under any profile).
 >
 > 2026-08-10 — Requirement Phase: added the structured User Story Session (discovery → capture → stories → independent review → human approval → approved baseline) as Rule 7; new **Requirements Reviewer** role (§2, §3.6) that independently challenges the complete package; lifecycle Phase 1 extended (see `project-lifecycle-v2.md`); SDD feature specs now derive from the approved baseline (Rule 6).
+> 2026-08-30 — added **UX/Design** role (§2, §3.7) covering lifecycle Phase 2 (UX & Prototyping), which previously had no agent role; authored flows/wireframes and the independent usability pass are separated per Rule 7 spirit.
 
 ---
 
@@ -30,6 +31,7 @@ These must **not** be implemented simultaneously — they are introduced in a de
 
 | Agent / role | Lifecycle phase | Core responsibility |
 |---|---|---|
+| **UX/Design** | Phase 2 | User flows for every Must story, wireframes/clickable prototype, usability pass against acceptance criteria, screen sign-off package for Gate 2 |
 | **Architect** | Phase 3 | Tech stack decisions (with tradeoffs), system design, OpenAPI contract, ERD, feature/dependency graph, ADRs |
 | **Requirements (Product)** | Phase 1 | Facilitates the discovery session with the human, captures confirmed requirements / assumptions / decisions / open questions, writes user stories + acceptance criteria, applies MoSCoW → defines the **MVP**; stories are challenged by an independent reviewer before the human approves the baseline |
 | **Requirements Reviewer** | Phase 1 | Independently challenges the complete requirements package (stories, acceptance criteria, assumptions, decisions, open questions, captured requirements) for inconsistency, missing info, hidden assumptions, unresolved requirements; findings feed the revision loop before human approval |
@@ -100,6 +102,15 @@ Each agent profile has: responsibilities, required skills/knowledge, inputs, out
 - **Tools:** doc generation, notion/airtable/obsidian.
 - **Constraints:** Must NOT invent requirements or silently fill gaps — unresolved items stay open questions for the human; reviews only, never authors; must be performed independently from the Requirements agent (separation of responsibilities — the same agent must not validate its own work).
 - **Collaboration:** From — Requirements (complete package). To — Requirements (review findings → revision loop, repeated until the package is clean).
+
+### 3.7 UX/Design
+- **Responsibilities:** Produce user flows for every **Must** story (happy path first) from the locked requirements baseline; design wireframes / a clickable low-fi prototype covering those flows; run a cheap usability pass — walk each flow against the story's acceptance criteria and record where the design blocks or confuses a user; surface every "how does the user do X?" gap as an explicit open question (never invent answers); package flows + screens + usability findings for human sign-off (Gate 2). Do NOT redo or re-litigate the requirements baseline; if a flow appears to contradict it, record a finding, do not change the baseline.
+- **Skills/knowledge:** user-flow design, wireframing/low-fi prototyping, information architecture, usability heuristics (e.g. Nielsen), acceptance-criteria walkthrough, accessibility basics (per Phase-1 NFRs).
+- **Inputs:** Locked requirements baseline (`docs/requirements.md` v1.0), discovery artifacts (`docs/requirements/discovery.md` v1.0), open OQ ledger (answers come from the human, not the agent).
+- **Outputs:** `docs/ux/flows.md`, wireframes/prototype committed to the repo (`docs/ux/`), usability-pass findings, Gate-2 sign-off package; new open questions added to the OQ ledger for Product Owner resolution.
+- **Tools:** `sketch` / `claude-design` (HTML mockups), `excalidraw` (diagrams), `p5js` (interactive prototypes), doc generation.
+- **Constraints:** Consumes the locked baseline as-is — no scope changes, no new requirements invented; may not proceed past Gate 2 without human UX sign-off; does not make architecture/stack choices (Phase 3); must not perform its own usability pass — the independent verification of the flows is done by an agent other than the author (Rule 7 spirit: author ≠ verifier); unresolved UX decisions stay open questions for the human.
+- **Collaboration:** From — Requirements (locked baseline + OQ ledger), Product Owner (OQ answers + Gate-2 sign-off). To — Product Owner (sign-off package, open questions); Architect (approved UX as Phase-3 input).
 
 ---
 
