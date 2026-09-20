@@ -153,6 +153,40 @@ The Markdown is for humans **and** the AI.
 
 But don't rely on Markdown alone for mathematical calculations.
 
+### `config.py` — the executable twin
+
+Every strategy folder also contains `config.py`. It holds the same
+requirements as **executable Python** and is the ONLY thing the core
+reads:
+
+```python
+# strategies/<slug>/config.py
+from trading.indicators.library import ema, rsi, sma
+from trading.strategy.config import IndicatorSpec
+
+TIMEFRAMES = ("4h", "1h")
+MIN_CANDLES = {"4h": 100, "1h": 100}
+INDICATORS = (
+    IndicatorSpec("ema_50", ema, {"length": 50}, timeframes=("4h",)),
+    IndicatorSpec("rsi_14", rsi, {"length": 14}, timeframes=("1h",)),
+    IndicatorSpec("volume_sma_20", sma,
+                  {"length": 20, "column": "volume"}),
+)
+```
+
+- The **collector** fetches exactly `TIMEFRAMES` with at least
+  `MIN_CANDLES[timeframe]` candles.
+- The **calculator** applies `INDICATORS` — functions imported from
+  `trading.indicators.library` (deterministic `pandas_ta_classic`
+  wrappers) with their parameters. The AI never computes indicators.
+- `load_strategy_config(slug)` validates the module (timeframe/min-candle
+  consistency, unique indicator names, declared timeframes) and fails
+  loudly on drift.
+
+The strategy file declares the same requirements for the agent and
+references its config via the `Config:` metadata line. If they drift,
+**the code wins** — so keep them in sync.
+
 ---
 
 # 4. Market data interface

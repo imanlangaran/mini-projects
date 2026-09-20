@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+from decimal import Decimal
 
 from .models import Candle
 

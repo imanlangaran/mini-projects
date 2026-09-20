@@ -1,8 +1,9 @@
 from decimal import Decimal
+from typing import Sequence
 
 from trading.market.snapshot import (
-    MarketSnapshot,
     IndicatorSnapshot,
+    MarketSnapshot,
 )
 
 
@@ -10,11 +11,12 @@ class MarketSnapshotBuilder:
 
     def build(
         self,
-        symbol,
-        timeframe,
-        current_price,
+        symbol: str,
+        timeframe: str,
+        current_price: Decimal,
         dataframe,
-    ):
+        indicator_names: Sequence[str] = (),
+    ) -> MarketSnapshot:
         row = dataframe.iloc[-1]
 
         return MarketSnapshot(
@@ -32,9 +34,10 @@ class MarketSnapshotBuilder:
             },
 
             indicators=IndicatorSnapshot(
-                ema_50=self._decimal(row["ema_50"]),
-                rsi_14=self._decimal(row["rsi_14"]),
-                volume_sma_20=self._decimal(row["volume_sma_20"]),
+                values={
+                    name: self._decimal(row[name])
+                    for name in indicator_names
+                },
             ),
         )
 

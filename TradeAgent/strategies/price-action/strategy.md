@@ -6,6 +6,8 @@
 - Author: Trading System
 - Market: Crypto
 - Timeframes: 4h, 1h
+- Config: price-action (pythonic definitions in `config.py` — timeframes,
+  indicators and parameters; this file and `config.py` MUST stay in sync)
 - Direction: Long and Short
 - Risk per trade: 1%
 - Status: active
@@ -40,6 +42,25 @@ Minimum:
 - 100 candles on the 1h timeframe
 
 The agent MUST NOT make a decision if the required OHLCV data is missing.
+
+---
+
+## Indicators
+
+The agent receives pre-computed indicator values from the pipeline. The
+agent MUST NOT calculate indicators itself.
+
+The executable definitions (function + parameters) live in
+`config.py`; the table below must stay in sync with it.
+
+| Indicator | Timeframe | Purpose |
+|---|---|---|
+| EMA(50) | 4h | Trend context on the structure timeframe |
+| RSI(14) | 1h | Momentum context on the confirmation timeframe |
+| Volume SMA(20) | 4h + 1h | Participation / volume context |
+
+The agent MUST NOT make a decision if a required indicator value is
+missing.
 
 ---
 

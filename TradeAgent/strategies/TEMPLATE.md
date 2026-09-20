@@ -9,6 +9,11 @@
 - Direction: <long | short | both>
 - Risk per trade: <e.g. 1%>
 - Status: active
+- Config: <slug> — the pythonic definitions (timeframes, minimum
+  candles, indicator functions and parameters) live in
+  `strategies/<slug>/config.py`. This file declares the same
+  requirements for humans and the agent. The two MUST stay in sync; the
+  pipeline runs the code, not the markdown.
 
 ---
 
@@ -38,6 +43,11 @@ Optional:
 ---
 
 ## Indicators
+
+> Each indicator used below MUST also be declared in
+> `strategies/<slug>/config.py` as an `IndicatorSpec` — the function
+> (imported from `trading.indicators.library`), its parameters, and the
+> timeframe(s) it applies to. Keep both files in sync.
 
 ### <Indicator 1>
 
