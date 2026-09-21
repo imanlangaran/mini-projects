@@ -1,0 +1,4 @@
+# Runtime data — created and owned by the pipeline at run time
+# (candles + indicators in data/market, agent analysis in data/analysis,
+#  audit records in data/runs). Never commit market data or agent state.
+data/

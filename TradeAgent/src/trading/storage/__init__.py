@@ -1,0 +1,1 @@
+"""Per-timeframe candle persistence and continuity validation (FR-9, FR-10, FR-28)."""

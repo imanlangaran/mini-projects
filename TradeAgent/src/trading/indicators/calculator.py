@@ -4,7 +4,7 @@ from typing import Sequence
 
 import pandas as pd
 
-from trading.market.models import Candle
+from trading.market.models import Candle, candles_to_frame
 from trading.strategy.config import IndicatorSpec
 
 
@@ -22,20 +22,25 @@ class IndicatorCalculator:
         candles: Sequence[Candle],
         indicators: Sequence[IndicatorSpec],
     ):
-        self.df = pd.DataFrame(
-            [
-                {
-                    "timestamp": candle.timestamp,
-                    "open": float(candle.open),
-                    "high": float(candle.high),
-                    "low": float(candle.low),
-                    "close": float(candle.close),
-                    "volume": float(candle.volume),
-                }
-                for candle in candles
-            ]
-        )
+        self.df = candles_to_frame(candles)
         self.indicators = tuple(indicators)
+
+    @classmethod
+    def from_frame(
+        cls,
+        frame: pd.DataFrame,
+        indicators: Sequence[IndicatorSpec],
+    ) -> "IndicatorCalculator":
+        """Build a calculator over an already-assembled candle frame.
+
+        Used after a storage sync so the full updated history (stored
+        candles + indicators) is recalculated without a Candle
+        round-trip (FR-12).
+        """
+        calculator = cls.__new__(cls)
+        calculator.df = frame.copy()
+        calculator.indicators = tuple(indicators)
+        return calculator
 
     def calculate(self) -> pd.DataFrame:
         """Run every declared indicator over the candle history."""

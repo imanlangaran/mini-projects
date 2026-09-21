@@ -610,20 +610,23 @@ Already in place (README §7):
 ✓ Indicator library + calculator           (FR-12, FR-13)
 ✓ Snapshot building                        (FR-14)
 ✓ CLI collection pass
+✓ Per-timeframe persistence                (FR-9, FR-10 —
+                                            CandleStore, data/market/)
+✓ Continuity validation                    (FR-28 — gap back-fill,
+                                            fail loud on irreparable
+                                            holes)
 ```
 
 Remaining, in order:
 
 ```text
- 1. Per-timeframe persistence               (FR-9, FR-10)
- 2. Continuity validation                   (FR-28)
- 3. Deterministic pre-checks                (FR-25)
- 4. Agent integration: structured output
+ 1. Deterministic pre-checks                (FR-25)
+ 2. Agent integration: structured output
     + validator                             (FR-15, FR-17)
- 5. Agent-run audit records                 (FR-27)
- 6. Risk engine                             (FR-18)
- 7. Agent-owned analysis workspace          (FR-19..FR-24)
- 8. Historical/replay testing (file-backed provider)
+ 3. Agent-run audit records                 (FR-27)
+ 4. Risk engine                             (FR-18)
+ 5. Agent-owned analysis workspace          (FR-19..FR-24)
+ 6. Historical/replay testing (file-backed provider)
 ```
 
 **Do not add order execution at any step.**

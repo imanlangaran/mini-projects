@@ -16,11 +16,17 @@ class CCXTMarketDataProvider(MarketDataProvider):
         symbol: str,
         timeframe: str,
         limit: int = 100,
+        since: datetime | None = None,
     ) -> list[Candle]:
+
+        since_ms = None
+        if since is not None:
+            since_ms = int(since.timestamp() * 1000)
 
         rows = self.exchange.fetch_ohlcv(
             symbol,
             timeframe=timeframe,
+            since=since_ms,
             limit=limit,
         )
 

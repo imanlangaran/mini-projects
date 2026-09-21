@@ -13,7 +13,13 @@ class MarketDataProvider(ABC):
         symbol: str,
         timeframe: str,
         limit: int = 100,
+        since: datetime | None = None,
     ) -> list[Candle]:
+        """Fetch up to ``limit`` candles, optionally only those at/after ``since``.
+
+        ``since`` supports incremental sync (FR-9): the provider returns
+        candle timestamps >= ``since`` (when given), oldest first.
+        """
         pass
 
     @abstractmethod

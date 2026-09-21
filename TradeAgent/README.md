@@ -481,15 +481,20 @@ The requirements above are the contract. Current implementation covers:
 - [x] FR-12, FR-13 — config-driven deterministic indicator calculation
       (`IndicatorCalculator`, `trading/indicators/library.py`)
 - [x] FR-14 — market snapshot with pre-computed indicator values
-- [ ] FR-9, FR-10 — incremental sync, persistence and separate
-      per-timeframe storage (one store per (symbol, timeframe))
+- [x] FR-9, FR-10 — incremental sync, persistence and separate
+      per-timeframe storage (one store per (symbol, timeframe),
+      `CandleStore` → `data/market/<symbol>/<timeframe>.parquet`)
+- [x] FR-28 — continuity validation on every sync: strictly ascending,
+      period-consistent timestamps; gaps back-filled from the provider,
+      an irreparable hole fails the run loudly (`ContinuityError`)
 - [ ] FR-15, FR-17 — agent evaluation loop and saved proposals
 - [ ] FR-18 — deterministic risk engine
 - [ ] FR-19..FR-24 — agent-owned analysis persistence (position
       folders, referenced checklist, anchored knowledge, max open
       positions, per-position evaluation, manual open/close)
-- [ ] FR-25..FR-28 — deterministic pre-checks, normative decision
-      vocabulary, agent-run audit records, continuity validation
+- [ ] FR-25..FR-27 — deterministic pre-checks, normative decision
+      vocabulary, agent-run audit records (FR-26 vocabulary and FR-25
+      pre-checks are wired into the CLI once the agent loop lands)
 
 ---
 

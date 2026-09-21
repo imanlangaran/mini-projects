@@ -6,6 +6,7 @@ ccxt==4.5.78
 pandas==3.0.6
 pandas-ta-classic==0.8.32
 pydantic==2.13.5
+pyarrow==25.0.1
 requests==2.34.2
 
 # --- chartbridge (bridge server + agent client) ---

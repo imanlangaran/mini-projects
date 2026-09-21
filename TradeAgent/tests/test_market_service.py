@@ -5,7 +5,7 @@ from trading.market.models import Candle
 
 class FakeMarketDataProvider:
 
-    def get_candles(self, symbol, timeframe, limit=100):
+    def get_candles(self, symbol, timeframe, limit=100, since=None):
         return [
             Candle(
                 timestamp="2026-09-19T09:00:00Z",

@@ -1,11 +1,13 @@
-"""Tests for the pythonic strategy config contract.
+"""Tests for the pythonic strategy config contract + Phase A storage sync.
 
 The strategy markdown declares requirements for humans and the agent;
 ``config.py`` is the executable source of truth. The core reads ONLY the
 config: timeframes drive fetching, indicator specs drive calculations.
+From Phase A on, fetching is incremental through the per-timeframe
+stores (FR-9, FR-10) with continuity validation (FR-28).
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pandas as pd
@@ -14,14 +16,19 @@ import pytest
 from trading.indicators.library import macd_hist, macd_line, stoch_d, stoch_k
 from trading.market.models import Candle
 from trading.market.service import MarketDataService
+from trading.storage.continuity import timeframe_period
 from trading.strategy.config import IndicatorSpec, load_strategy_config
 
 
-def make_candles(count: int) -> list[Candle]:
-    start = datetime(2026, 1, 1)
+def make_candles(
+    count: int,
+    period: timedelta = timedelta(minutes=15),
+    start: datetime | None = None,
+) -> list[Candle]:
+    start = start or datetime(2026, 1, 1, tzinfo=timezone.utc)
     return [
         Candle(
-            timestamp=start + timedelta(minutes=15 * i),
+            timestamp=start + period * i,
             open=Decimal(str(100 + i)),
             high=Decimal(str(101 + i)),
             low=Decimal(str(99 + i)),
@@ -33,14 +40,25 @@ def make_candles(count: int) -> list[Candle]:
 
 
 class FakeMarketDataProvider:
-    """Deterministic provider: returns ``limit`` candles per call."""
+    """Deterministic provider: returns ``limit`` candles per call.
+
+    Candle spacing matches the requested timeframe (continuity requires
+    period-consistent data), and ``since`` continues the series from the
+    resume point so incremental sync (FR-9) is deterministic.
+    """
 
     def __init__(self):
-        self.calls = []  # (symbol, timeframe, limit)
+        self.calls = []  # (symbol, timeframe, limit, since)
 
-    def get_candles(self, symbol, timeframe, limit=100):
-        self.calls.append((symbol, timeframe, limit))
-        return make_candles(limit)
+    def get_candles(self, symbol, timeframe, limit=100, since=None):
+        self.calls.append((symbol, timeframe, limit, since))
+        period = timeframe_period(timeframe)
+        if since is None:
+            start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        else:
+            # continue the series right after the resume point
+            start = since + period
+        return make_candles(limit, period=period, start=start)
 
     def get_current_price(self, symbol):
         return Decimal("150")
@@ -144,32 +162,45 @@ class TestConfigDrivenCollection:
 
     def setup_method(self):
         self.provider = FakeMarketDataProvider()
-        self.service = MarketDataService(self.provider)
-        self.config = load_strategy_config("price-action")
 
-    def test_fetches_exactly_the_configured_timeframes(self):
-        snapshots = self.service.get_strategy_snapshots("BTC/USDT", self.config)
+    def _service(self, tmp_path):
+        return MarketDataService(self.provider, store_dir=tmp_path)
+
+    def test_fetches_exactly_the_configured_timeframes(self, tmp_path):
+        service = self._service(tmp_path)
+        config = load_strategy_config("price-action")
+        snapshots = service.get_strategy_snapshots("BTC/USDT", config)
 
         assert set(snapshots) == {"4h", "1h"}
-        requested = {(symbol, timeframe) for symbol, timeframe, _ in self.provider.calls}
+        requested = {
+            (symbol, timeframe) for symbol, timeframe, _, _ in self.provider.calls
+        }
         assert requested == {("BTC/USDT", "4h"), ("BTC/USDT", "1h")}
 
-    def test_requests_min_candles_per_timeframe(self):
-        self.service.get_strategy_snapshots("BTC/USDT", self.config)
+    def test_requests_min_candles_per_timeframe(self, tmp_path):
+        service = self._service(tmp_path)
+        config = load_strategy_config("price-action")
+        service.get_strategy_snapshots("BTC/USDT", config)
 
-        limits = {timeframe: limit for _, timeframe, limit in self.provider.calls}
+        limits = {
+            timeframe: limit for _, timeframe, limit, _ in self.provider.calls
+        }
         assert limits == {"4h": 100, "1h": 100}  # MIN_CANDLES from config
 
-    def test_unfinished_candle_is_dropped(self):
-        snapshots = self.service.get_strategy_snapshots("BTC/USDT", self.config)
+    def test_unfinished_candle_is_dropped(self, tmp_path):
+        service = self._service(tmp_path)
+        config = load_strategy_config("price-action")
+        snapshots = service.get_strategy_snapshots("BTC/USDT", config)
 
         # Provider returned 100 candles per timeframe; the still-forming
         # one is dropped, so the snapshot shows the 99th (close=198).
         assert snapshots["4h"].candle["close"] == Decimal("198")
         assert snapshots["1h"].candle["close"] == Decimal("198")
 
-    def test_declared_indicators_are_computed_per_timeframe(self):
-        snapshots = self.service.get_strategy_snapshots("BTC/USDT", self.config)
+    def test_declared_indicators_are_computed_per_timeframe(self, tmp_path):
+        service = self._service(tmp_path)
+        config = load_strategy_config("price-action")
+        snapshots = service.get_strategy_snapshots("BTC/USDT", config)
 
         four_h = snapshots["4h"].indicators.values
         one_h = snapshots["1h"].indicators.values
@@ -181,8 +212,10 @@ class TestConfigDrivenCollection:
         assert all(isinstance(v, Decimal) for v in four_h.values())
         assert all(isinstance(v, Decimal) for v in one_h.values())
 
-    def test_indicator_values_track_the_market(self):
-        snapshots = self.service.get_strategy_snapshots("BTC/USDT", self.config)
+    def test_indicator_values_track_the_market(self, tmp_path):
+        service = self._service(tmp_path)
+        config = load_strategy_config("price-action")
+        snapshots = service.get_strategy_snapshots("BTC/USDT", config)
 
         # close rises by 1 every candle, so ema_50 must be below the
         # latest close (198) and rising — i.e. between 50 and 198.

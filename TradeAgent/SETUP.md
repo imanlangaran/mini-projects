@@ -84,7 +84,7 @@ pip install -r requirements.txt
 pytest -q
 ```
 
-Expected: **51 passed** (14 core + 37 chartbridge) in a few seconds,
+Expected: **66 passed** (29 core + 37 chartbridge) in a few seconds,
 with no network access needed.
 
 ---
@@ -195,8 +195,8 @@ bridge tests → fake-AI POST → EA receives (Experts log) → line on chart
 - `requirements.txt` pins the known-good versions from the development
   machine (Python 3.12): `fastapi 0.141.1`, `uvicorn 0.53.0`,
   `httpx 0.28.1`, `ccxt 4.5.78`, `pandas 3.0.6`,
-  `pandas-ta-classic 0.8.32`, `pydantic 2.13.5`, `requests 2.34.2`,
-  `pytest 9.1.1`.
+  `pandas-ta-classic 0.8.32`, `pydantic 2.13.5`, `pyarrow 25.0.1`,
+  `requests 2.34.2`, `pytest 9.1.1`.
 - After changing dependencies: install, run the full suite
-  (`pytest -q` → 51), then update the pins in `requirements.txt` in the
+  (`pytest -q` → 66), then update the pins in `requirements.txt` in the
   same commit.

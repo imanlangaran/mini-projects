@@ -1,6 +1,8 @@
 from decimal import Decimal
 from typing import Sequence
 
+import pandas as pd
+
 from trading.market.snapshot import (
     IndicatorSnapshot,
     MarketSnapshot,
@@ -43,7 +45,7 @@ class MarketSnapshotBuilder:
 
     @staticmethod
     def _decimal(value):
-        if value != value:  # NaN
+        if pd.isna(value):  # None, NaN, NaT — indicator not computable (warm-up)
             return None
 
         return Decimal(str(value))
