@@ -1,22 +1,35 @@
-For the **Market Analysis Agent**, I'd keep the MVP deliberately small: one agent, one strategy, read-only market access, and **no direct order execution**.
+# TradeAgent — Architecture
 
-The goal is:
+Design and behavior details for the Market Analysis Agent: how the
+deterministic layers and the reasoning layer (Hermes) are wired
+together, what the agent may and may not do, and how a run flows end
+to end.
 
-> Given a predefined strategy + current market data + current position, evaluate every required condition and produce an auditable entry/exit/risk proposal.
+> **The requirements contract is [README.md](./README.md) (FR-1..FR-28).
+> Where reading the two documents together could leave room for doubt,
+> README.md is normative — and any mismatch introduced between them must
+> be fixed in the same change that causes it.**
+
+| | |
+|---|---|
+| Document | Architecture (v1.1) |
+| Status | Aligned with README.md v1.1 — FR-1..FR-28 |
+| Related docs | [README.md](./README.md) — requirements specification |
+
+---
 
 ## 1. MVP architecture
 
 ```text
-                    ┌──────────────────┐
-                    │   strategy.md    │
-                    │                  │
-                    │ Rules             │
-                    │ Entry checklist   │
-                    │ Exit checklist    │
-                    │ Risk parameters  │
-                    └────────┬─────────┘
-                             │
-                             ▼
+                    ┌───────────────────────────┐
+                    │   Strategy (two files)    │
+                    │                           │
+                    │ strategy.md   rules       │
+                    │ config.py     executable  │
+                    │               requirements│
+                    └─────────────┬─────────────┘
+                                  │
+                                  ▼
 ┌──────────────┐      ┌──────────────────┐
 │ Market Data  │─────▶│ Market Analysis  │
 │ Provider     │      │ Agent            │
@@ -26,17 +39,18 @@ The goal is:
 │ indicators   │      └────────┬─────────┘
 └──────────────┘               │
                                ▼
-                       Trading Analysis
+                      Analysis + Decision
+      (NO_TRADE / HOLD / ENTRY_CANDIDATE / EXIT_CANDIDATE)
                                │
                     ┌──────────┴──────────┐
-                    │                     │
-                 NO TRADE             CANDIDATE
-                                          │
-                                          ▼
-                                   Risk Engine
-                                          │
-                                          ▼
-                                  Final Proposal
+                    │      candidate      │
+                    ▼                     ▼
+               Risk Engine          Saved analysis
+                    │               (always, FR-27)
+               PASS / REJECT
+                    │
+                    ▼
+             Final Proposal
 ```
 
 For MVP:
@@ -45,204 +59,124 @@ For MVP:
 
 ---
 
-# 2. Project structure
+## 2. Project structure
 
-I'd use Python for this project because your market-data and quantitative ecosystem will be easier to work with.
+Python, because the market-data and quantitative ecosystem is where
+this project lives.
 
 ```text
-trading-agent/
-│
+TradeAgent/
 ├── strategies/
-│   └── btc-breakout/
-│       ├── strategy.md
-│       ├── checklist.md
-│       └── risk-management.md
-│
-├── src/
-│   ├── domain/
-│   │   ├── market.py
-│   │   ├── strategy.py
-│   │   ├── position.py
-│   │   └── decision.py
-│   │
-│   ├── market_data/
-│   │   ├── interface.py
-│   │   └── file_provider.py
-│   │
-│   ├── strategy/
-│   │   ├── loader.py
-│   │   └── evaluator.py
-│   │
-│   ├── risk/
-│   │   └── risk_engine.py
-│   │
-│   ├── agent/
-│   │   ├── prompt.py
-│   │   └── analyst.py
-│   │
-│   └── cli.py
-│
+│   └── price-action/
+│       ├── strategy.md      ← rules & requirements (humans + agent)
+│       ├── config.py        ← executable twin — the only thing the core reads
+│       └── skills/          ← agent skills (markdown)
+├── src/trading/
+│   ├── cli.py               ← entry point: python -m trading.cli --strategy <slug>
+│   ├── indicators/
+│   │   ├── library.py       ← deterministic indicator functions
+│   │   └── calculator.py    ← applies the config-declared indicator specs
+│   ├── market/              ← provider (CCXT), service, snapshot, models
+│   └── strategy/
+│       └── config.py        ← StrategyConfig, IndicatorSpec, loader/validation
 ├── data/
-│   └── market/
-│
+│   ├── market/              ← candles + indicators, per (symbol, timeframe)
+│   ├── analysis/            ← Hermes-managed analysis workspace (README §3.7)
+│   └── runs/                ← one audit record per run (FR-27)
 ├── tests/
-│
 └── pyproject.toml
 ```
 
-Don't build the database, exchange execution, web UI, etc. yet.
+Don't build a database, exchange execution, or a web UI yet.
 
 ---
 
-# 3. Define the strategy format first
+## 3. The strategy format: two files, one contract
 
-This is the first implementation task.
+A strategy is **one folder with two files** (plus agent skills):
 
-For example:
-
-### `strategy.md`
-
-```markdown
-# BTC Breakout Strategy
-
-## Market
-
-Symbol: BTCUSDT
-Timeframe: 15m
-
-## Entry
-
-Direction: LONG
-
-Conditions:
-
-1. Close > EMA50
-2. Close > previous 20 candle high
-3. Volume > Volume SMA20
-4. RSI14 >= 50
-5. RSI14 <= 70
-
-All conditions must pass.
-
-## Exit
-
-Exit when:
-
-1. Stop loss is reached
-2. Take profit is reached
-3. Close < EMA50
-```
-
-Then:
-
-### `risk-management.md`
-
-```markdown
-# Risk Management
-
-Maximum risk per trade: 1%
-
-Maximum position exposure: 10%
-
-Take profit target: 3%
-
-Minimum risk/reward: 2
-```
-
-The Markdown is for humans **and** the AI.
-
-But don't rely on Markdown alone for mathematical calculations.
-
-### `config.py` — the executable twin
-
-Every strategy folder also contains `config.py`. It holds the same
-requirements as **executable Python** and is the ONLY thing the core
-reads:
+- `strategy.md` — the rules, readable by humans and the agent; it
+  references its config via the `Config:` metadata line.
+- `config.py` — the executable twin; the ONLY thing the core reads.
 
 ```python
 # strategies/<slug>/config.py
 from trading.indicators.library import ema, rsi, sma
 from trading.strategy.config import IndicatorSpec
 
+NAME = "Support & Resistance Price Action"
+
+SYMBOLS = ("BTC/USDT",)     # CCXT universal symbol format
+EQUITY = 10_000             # account equity for the risk engine (FR-18)
+
 TIMEFRAMES = ("4h", "1h")
 MIN_CANDLES = {"4h": 100, "1h": 100}
+
+RISK_PER_TRADE = 0.01       # max risk per trade (fraction of equity)
+MAX_POSITIONS = 3           # max simultaneously open positions per symbol
+
+PARAMS = {"sl_buffer": 0.002, "min_rr": 2.0}   # strategy-specific knobs
+
 INDICATORS = (
     IndicatorSpec("ema_50", ema, {"length": 50}, timeframes=("4h",)),
     IndicatorSpec("rsi_14", rsi, {"length": 14}, timeframes=("1h",)),
+    # timeframes=None → applied to every declared timeframe (FR-13):
     IndicatorSpec("volume_sma_20", sma,
-                  {"length": 20, "column": "volume"}),
+                  {"length": 20, "column": "volume"}, timeframes=None),
 )
 ```
 
-- The **collector** fetches exactly `TIMEFRAMES` with at least
-  `MIN_CANDLES[timeframe]` candles.
-- The **calculator** applies `INDICATORS` — functions imported from
-  `trading.indicators.library` (deterministic `pandas_ta_classic`
-  wrappers) with their parameters. The AI never computes indicators.
-- `load_strategy_config(slug)` validates the module (timeframe/min-candle
-  consistency, unique indicator names, declared timeframes) and fails
-  loudly on drift.
+- The **collector** fetches exactly `SYMBOLS` × `TIMEFRAMES` with at
+  least `MIN_CANDLES[timeframe]` candles (FR-8).
+- The **calculator** applies `INDICATORS` — deterministic functions
+  from `trading.indicators.library` (`pandas_ta_classic` wrappers)
+  with their parameters; `timeframes=None` means all declared
+  timeframes (FR-13). The AI never computes indicators.
+- `load_strategy_config(slug)` validates the module (FR-4..FR-6) and
+  **fails the run loudly on any drift**.
 
-The strategy file declares the same requirements for the agent and
-references its config via the `Config:` metadata line. If they drift,
-**the code wins** — so keep them in sync.
+The strategy file declares the same requirements for the agent. If the
+two files disagree, **the run refuses to start** (FR-6). There is no
+"code wins" precedence — the two-file agreement is enforced by
+validation at startup, not by convention. A documentation example that
+disagrees with its own config is exactly the failure FR-6 exists to
+catch. (The loader's module-side validation is implemented — README
+§7; cross-validating the markdown against the config is remaining
+work.)
 
 ---
 
-# 4. Market data interface
+## 4. Market data interface
 
-Define one abstraction:
+One read-only abstraction:
 
 ```text
 MarketDataProvider
 
 get_current_price()
 get_candles()
-get_account()
-get_position()
 ```
 
-For the first version:
+- The first backend is **CCXT (Binance)** — live market data (FR-7).
+- A **file-backed provider** (stored candles/JSON) is the tool for
+  replay testing (§14): same stored input + same strategy → same
+  result.
 
-```text
-CSV / JSON
-```
+Deliberately **not** in the interface for the MVP:
 
-not a real exchange.
+- `get_account()` / `get_position()` — there is no execution layer.
+  Positions live in the registry the agent maintains (README §3.7,
+  FR-24), and the risk engine's equity is config-declared (`EQUITY`,
+  FR-18). Account access arrives only together with order execution.
 
-Example:
-
-```json
-{
-  "symbol": "BTCUSDT",
-  "timeframe": "15m",
-  "candles": [...]
-}
-```
-
-Why?
-
-Because you want to be able to reproduce an agent run.
-
-```text
-Agent run #17
-        ↓
-market-data.json
-        ↓
-same input
-        ↓
-same strategy
-        ↓
-debuggable result
-```
-
-This becomes extremely useful later.
+Symbols are declared in CCXT universal format (`BTC/USDT`); on-disk
+folders use the filesystem-safe form (`BTC-USDT` — README §3.6).
 
 ---
 
-# 5. Calculate indicators outside the AI
+## 5. Calculate indicators outside the AI
 
-This is important.
+This is a hard rule.
 
 Don't give Hermes raw candles and ask:
 
@@ -256,9 +190,9 @@ Candles
    ▼
 Indicator Engine
    │
-   ├── EMA50
-   ├── RSI14
-   ├── SMA20 volume
+   ├── ema_50
+   ├── rsi_14
+   ├── volume_sma_20
    └── ...
    │
    ▼
@@ -268,15 +202,15 @@ Market Snapshot
 AI
 ```
 
-The AI should reason over:
+The AI reasons over pre-computed values:
 
 ```json
 {
   "price": 67250,
-  "ema50": 66820,
-  "rsi14": 63.2,
+  "ema_50": 66820,
+  "rsi_14": 63.2,
   "volume": 1800,
-  "volume_sma20": 1500
+  "volume_sma_20": 1500
 }
 ```
 
@@ -284,53 +218,38 @@ rather than performing financial calculations itself.
 
 ---
 
-# 6. Build the checklist evaluator
+## 6. The deterministic layers
 
-Before involving Hermes, implement:
+Two layers are deterministic code; the agent is the third:
 
 ```text
-Strategy
-    ↓
-Rule Evaluator
-    ↓
-Checklist Result
+1. Pre-checks (FR-25)     data present, candle closed, indicator
+                          values present, R/R arithmetic — evaluated
+                          BEFORE the agent; failure aborts loudly
+2. Agent (FR-15, FR-16)   interpretive conditions: zones, structure,
+                          confirmation patterns → proposal
+3. Risk engine (FR-18)    sizing, max risk, R/R → PASS / REJECT
 ```
 
-For example:
+The pre-check layer returns a structured result, e.g.:
 
 ```json
 {
-  "entry": {
-    "allowed": true,
-    "checks": [
-      {
-        "name": "Price above EMA50",
-        "passed": true,
-        "actual": 67250,
-        "expected": "> 66820"
-      },
-      {
-        "name": "Breakout",
-        "passed": true
-      },
-      {
-        "name": "Volume confirmation",
-        "passed": true
-      }
-    ]
-  }
+  "pre_checks": [
+    {"name": "Required data present", "passed": true},
+    {"name": "Analyzed candle closed", "passed": true},
+    {"name": "Indicator values present", "passed": true}
+  ]
 }
 ```
 
-This is your deterministic layer.
+A failed pre-check is terminal for that symbol's evaluation in that
+run (FR-26: NO_DECISION) — no agent evaluation ever runs over missing
+or discontinuous data (FR-28).
 
 ---
 
-# 7. Then introduce Hermes
-
-Now Hermes becomes the **reasoning layer**.
-
-Give it:
+## 7. Hermes — the reasoning layer
 
 ```text
 SYSTEM PROMPT
@@ -339,7 +258,7 @@ You are a market analysis agent.
 
 You must:
 
-1. Read the provided strategy.
+1. Read the provided strategy (and its skills).
 2. Evaluate the current market context.
 3. Evaluate every checklist item.
 4. Never invent missing market data.
@@ -347,67 +266,63 @@ You must:
 6. Never bypass risk-management rules.
 7. Never execute orders.
 8. Produce a structured analysis.
+9. Persist the run's results in the analysis workspace (FR-19).
 ```
 
-Then provide:
+Inputs:
 
 ```text
-STRATEGY
-+
-CHECKLIST
-+
-RISK POLICY
-+
-MARKET SNAPSHOT
-+
-CURRENT POSITION
-+
-RECENT TRADES
+STRATEGY              strategy.md
+SKILLS                strategies/<slug>/skills/
+PRE-CHECK RESULTS     deterministic layer output (§6)
+MARKET SNAPSHOT       per timeframe (FR-14)
+STORED HISTORY        data/market/<symbol>/<timeframe>.parquet (§3.6)
+ANALYSIS WORKSPACE    data/analysis/<symbol>/ — registry, positions,
+                      knowledge (README §3.7, FR-19)
 ```
 
 ---
 
-# 8. Give the agent tools
+## 8. Agent tools
 
-For the first version, only give it these:
+First version — read-only, no side effects outside the analysis
+workspace:
 
 ```text
 get_market_snapshot
+get_current_price
 get_candles
-get_current_position
-get_recent_trades
-get_account_state
+read_stored_history
+read_analysis_workspace
+write_analysis_workspace   (FR-19: analyses, checklists, registry,
+                            knowledge — only under data/analysis/)
 ```
 
-Potentially:
-
-```text
-calculate_risk
-```
-
-but I'd initially make risk calculation a deterministic application service rather than an AI tool.
-
-Don't give it:
+Never provided:
 
 ```text
 execute_order()
 modify_strategy()
 change_risk_policy()
+anything writing outside data/analysis/
 ```
+
+`get_account` / `get_position` tools don't exist in the MVP — position
+state is read from the registry (FR-24), and there is no account to
+read (FR-18).
 
 ---
 
-# 9. Define the agent output
+## 9. Agent output
 
-Don't let the agent return arbitrary prose as the primary result.
-
-Use a schema like:
+Don't let the agent return arbitrary prose as the primary result. Use
+a schema the application validates; decision values per FR-26:
 
 ```json
 {
   "decision": "ENTRY_CANDIDATE",
 
-  "symbol": "BTCUSDT",
+  "symbol": "BTC/USDT",
 
   "side": "LONG",
 
@@ -422,9 +337,9 @@ Use a schema like:
 
   "checklist": [
     {
-      "rule": "Price above EMA50",
+      "rule": "Bullish rejection at support zone",
       "passed": true,
-      "evidence": "67250 > 66820"
+      "evidence": "wick low 66980 inside zone 67000-67200; close 67250 above zone"
     }
   ],
 
@@ -439,24 +354,27 @@ Use a schema like:
 }
 ```
 
-Your application validates this schema.
+Allowed decisions: `NO_TRADE`, `HOLD`, `ENTRY_CANDIDATE`,
+`EXIT_CANDIDATE` — or `NO_DECISION` (terminal, required data missing).
+Anything else is rejected as a malformed response (Test 5).
 
 ---
 
-# 10. Add the deterministic Risk Engine
+## 10. Risk engine
 
 After Hermes produces:
 
 ```text
 Entry = 67250
-SL = 66700
-TP = 68350
+SL    = 66700
+TP    = 68350
 ```
 
-the application calculates:
+the application calculates, using `EQUITY` from the strategy config
+(FR-18 — never fetched from an exchange):
 
 ```text
-account equity
+account equity (config)
         ↓
 maximum allowed loss
         ↓
@@ -479,197 +397,132 @@ Risk Engine
      └── REJECT
 ```
 
-Even if Hermes says:
+Check sets (FR-18):
 
-> "This is an excellent opportunity."
+- **Entry candidates** — full checks: position size, max risk per
+  trade, max exposure, minimum R/R.
+- **Exit candidates** — validity checks only: an OPEN position exists
+  in the registry and the strategy's exit rules allow the exit. Exits
+  are not sized.
 
-the risk engine can say:
-
-```text
-REJECT
-
-Reason:
-Position size exceeds maximum exposure.
-```
+Even if Hermes says "This is an excellent opportunity", the risk
+engine can return `REJECT` — and per FR-26 the candidate keeps its
+decision with `risk_result: REJECT`; no final proposal is produced.
 
 ---
 
-# 11. Agent run lifecycle
+## 11. Run lifecycle
 
-Your first complete run should look like:
+A run is triggered manually (`python -m trading.cli --strategy <slug>`)
+or by an external scheduler — the core never schedules itself.
 
 ```text
 START
  │
- ├── Load strategy
+ ├── Load strategy config               (FR-4..FR-6)
+ ├── Validate strategy.md vs config.py  (fail loud on drift, FR-6)
  │
- ├── Load risk policy
+ ├── For each (symbol, timeframe):
+ │     ├── Read last stored candle
+ │     ├── Fetch missing candles        (FR-9)
+ │     ├── Validate continuity, back-fill gaps (FR-28)
+ │     ├── Recalculate indicators       (FR-12, FR-13)
+ │     └── Save candles + indicators    (FR-10)
  │
- ├── Get market snapshot
- │
- ├── Get current position
- │
- ├── Get recent trades
- │
- ├── Run deterministic checks
- │
- ├── Ask Hermes for market analysis
- │     ├── Hermes reads the registry + open position folders
- │     │     (data/analysis/<symbol>/) and the strategy skills
- │     ├── For EACH open position: Hermes appends an analysis md
- │     │     to the position folder and updates its checklist
- │     │     with references to that analysis
- │     ├── Hermes evaluates the snapshot for a new position and
- │     │     creates its folder (registry row: CANDIDATE, or
- │     │     NOT OPENED when MAX_POSITIONS is full)
- │     └── Hermes updates knowledge entries, each with
- │           an as-of anchor (knowledge/*.md)
- │
- ├── Validate Hermes output
- │
- ├── Run risk engine
- │
- └── Save analysis
-```
-
-Output:
-
-```text
-NO_TRADE
-```
-
-or:
-
-```text
-ENTRY_CANDIDATE
-```
-
-or:
-
-```text
-EXIT_CANDIDATE
+ ├── Build market snapshot (FR-14)
+ ├── Run deterministic pre-checks (FR-25)
+ ├── Ask Hermes to evaluate
+ │     ├── Read registry + open position folders + knowledge
+ │     ├── For EACH open position: append analysis md, update
+ │     │   checklist with references (FR-20, FR-23)
+ │     ├── Re-derive only stale/invalidated knowledge (FR-21)
+ │     ├── Evaluate a new entry; save its folder + analysis
+ │     │   (CANDIDATE, or "NOT OPENED — max reached", FR-22, FR-24)
+ │     └── Update registry + knowledge (FR-19)
+ ├── Validate Hermes output (schema + FR-26 vocabulary)
+ ├── Run risk engine (FR-18)
+ └── Save the agent-run record (FR-27) + analysis
 ```
 
 ---
 
-# 12. Persist every run
+## 12. Persist every run
 
-Even in MVP, create an `agent_runs` record.
-
-Something like:
+Every run writes one audit record — a JSON file under `data/runs/`,
+one file per run (FR-27):
 
 ```text
-agent_runs
------------
+data/runs/run-<id>.json
+-----------------------
 id
 timestamp
-strategy_version
-symbol
-market_snapshot
-position_snapshot
-agent_input
+strategy           slug + declared version (strategy.md metadata)
+symbols
+input_snapshot_refs
 agent_output
-decision
-risk_result
+decision           FR-26 vocabulary
+risk_result        PASS / REJECT / null
 ```
 
-This is important because later you can ask:
-
-> Why did the agent recommend this trade?
-
-You can reconstruct the exact run.
+This is what makes "why did the agent recommend this trade?"
+answerable later: the record plus the referenced data files
+(§3.6, §3.7) reconstruct and replay the exact run.
 
 ### 12.1 Analysis workspace (Hermes-managed)
 
-On top of the audit record, Hermes runs its own persistence: it has
-direct file access, so it performs the "load previous analysis" and
-"store agent-derived knowledge" steps itself. The layout is the
-predefined contract (full definition: README §3.7, FR-19..FR-24):
+On top of the audit record, Hermes maintains its own persistence under
+`data/analysis/<symbol>/`: `registry.md` (source of truth for
+positions), `knowledge/` (zones, trend), and one folder per position
+holding a cumulative `checklist.md` and one analysis file per run.
 
-```text
-data/analysis/<symbol>/
-├── registry.md   open-position index — source of truth, edited by
-│                 the user directly or by Hermes on the user's
-│                 instruction: id, status (CANDIDATE/OPEN/CLOSED),
-│                 opened at, entry, SL, TP, folder
-├── knowledge/    zones.md, trend.md — cross-run state. Every entry
-│                 carries an as-of anchor (timestamp + candle index)
-│                 and a validity trigger; status: VALID / STALE
-└── positions/
-    └── P-0001/   one folder per position:
-        ├── checklist.md     cumulative strategy checklist; each row:
-        │                    item, status, checked at, reference
-        │                    to the analysis file that checked it
-        └── analysis-*.md    one file per run that evaluates this position
-```
+The full, normative layout and its rules are **README §3.7
+(FR-19..FR-24)** — that section is the contract; this document does
+not duplicate it.
 
-Rule of thumb:
+Rule of thumb (FR-21):
 
 > **Persist agent analysis with an "as-of" anchor (timestamp + candle
 > index) and a validity trigger; re-derive only what is stale or
 > invalidated.**
 
-A persisted zone is reused while valid — price revisiting it
-increments its test count — and is re-derived only when its trigger
-fires (e.g. price broke through the zone) or the underlying candles
-changed. The deterministic checklist is re-evaluated in code every run
-(cheap); the agent's structural analysis (zones, trend, swing points)
-is what gets persisted.
+The deterministic checklist is re-evaluated every run (cheap); the
+agent's structural analysis (zones, trend, swing points) is what gets
+persisted and reused while valid — a zone whose trigger fired is
+re-derived, a zone merely re-tested is reused with its test count
+incremented.
 
-Positions are tracked as folders under `positions/`: one folder per
-position, each with a cumulative `checklist.md` and one analysis file
-per run. Multiple open positions are evaluated separately — one run
-produces one analysis per open position — and a new entry is evaluated
-every run with the newest snapshot. Its registry row starts as
-CANDIDATE and is only opened when the strategy allows it
-(`MAX_POSITIONS`, declared in `config.py` and `strategy.md`); at the
-limit the analysis is still saved, noted "NOT OPENED — max reached".
-
-For the MVP, positions open and close MANUALLY — Hermes never executes
-orders. A new-position evaluation creates the folder and a registry
-row with status CANDIDATE; the user then opens the position either by
-editing `registry.md` directly or by telling Hermes ("I opened the
-position at ..."), and Hermes updates the row to OPEN (entry, SL, TP,
-opened at) and monitors it like any other position. The same
-instruction path closes a position.
+Positions open and close MANUALLY (FR-24): a new-position evaluation
+creates the folder and a CANDIDATE registry row (or the annotation
+"NOT OPENED — max reached", FR-22); the user opens or closes by
+editing `registry.md` directly or telling Hermes. Hermes never
+executes orders.
 
 ---
 
-# 13. CLI first
-
-Don't build an API yet.
-
-Create:
+## 13. CLI first
 
 ```bash
-python -m src.cli analyze BTCUSDT
+python -m trading.cli --strategy price-action
+python -m trading.cli --strategy price-action --symbol ETH/USDT   # override SYMBOLS
 ```
 
-Output:
+Today the CLI runs the deterministic collection pass (load config →
+sync → calculate → print snapshots). The target output of a full run,
+once the agent loop is wired (FR-15..FR-18):
 
 ```text
-Strategy: BTC Breakout v1
-Symbol: BTCUSDT
-Timeframe: 15m
+Strategy   : Support & Resistance Price Action (price-action)
+Symbol     : BTC/USDT
+Timeframes : 4h, 1h
 
 Market
 ------
-Price:       67,250
-EMA50:       66,820
-RSI14:       63.2
-Volume:      1,800
-Volume SMA:  1,500
-
-Entry Checklist
----------------
-✓ Price > EMA50
-✓ Breakout
-✓ Volume confirmation
-✓ RSI range
+[4h] close=67,250  ema_50=66,820
+[1h] close=67,250  rsi_14=63.2  volume_sma_20=1,500
 
 Decision
 --------
-ENTRY CANDIDATE
+ENTRY_CANDIDATE          (or NO_TRADE / HOLD / EXIT_CANDIDATE)
 
 Entry:       67,250
 Stop Loss:   66,700
@@ -677,62 +530,59 @@ Take Profit: 68,350
 
 Risk
 ----
-Risk:        1.0%
+Risk:        1.0%          Risk result: PASS
 R:R:         2.0
 
 Order
 -----
-NOT EXECUTED
+NOT EXECUTED (agent cannot trade)
 ```
 
 This gives you a very easy development/debugging loop.
 
 ---
 
-# 14. Testing strategy
+## 14. Testing strategy
 
-Before connecting real market data:
+Before connecting real market data — and on every strategy change:
 
 ### Test 1 — all conditions pass
 
 ```text
-Expected:
-ENTRY_CANDIDATE
+Expected: ENTRY_CANDIDATE, risk PASS
 ```
 
 ### Test 2 — one condition fails
 
 ```text
-Expected:
-NO_TRADE
+Expected: NO_TRADE
 ```
 
 ### Test 3 — risk too high
 
 ```text
-Expected:
-RISK_REJECTED
+Expected: decision stays ENTRY_CANDIDATE, risk_result REJECT,
+          no final proposal (FR-26 — no separate RISK_REJECTED decision)
 ```
 
 ### Test 4 — existing position
 
 ```text
-Expected:
-HOLD / EXIT_CANDIDATE
+Expected: HOLD or EXIT_CANDIDATE (evaluated in its own position
+          folder, FR-23)
 ```
 
 ### Test 5 — malformed AI response
 
 ```text
-Expected:
-Agent result rejected
+Expected: agent result rejected; run recorded with the validation
+          failure (FR-27)
 ```
 
 ### Test 6 — missing market data
 
 ```text
-Expected:
-NO_DECISION
+Expected: NO_DECISION (FR-2, FR-26)
 ```
 
 Never let missing data become:
@@ -741,49 +591,46 @@ Never let missing data become:
 AI assumes X
 ```
 
----
-
-# 15. Implementation order
-
-I'd implement exactly this sequence:
+### Test 7 — discontinuous history
 
 ```text
-1. Strategy Markdown format
-        ↓
-2. Strategy loader
-        ↓
-3. Market data model
-        ↓
-4. FileMarketDataProvider
-        ↓
-5. Indicator calculator
-        ↓
-6. Deterministic checklist evaluator
-        ↓
-7. Risk engine
-        ↓
-8. Hermes integration
-        ↓
-9. Structured agent output
-        ↓
-10. Agent output validator
-        ↓
-11. Agent-run persistence
-        ↓
-12. CLI
-        ↓
-13. Historical/replay testing
-        ↓
-14. Real market-data provider
+Expected: run fails loudly (FR-28); no analysis over a data hole
 ```
-
-**Do not add order execution yet.**
 
 ---
 
-## The boundary I want you to maintain
+## 15. Implementation order
 
-Think of Hermes as this:
+Already in place (README §7):
+
+```text
+✓ Strategy format + pythonic config        (FR-1..FR-5,
+                                            FR-6 config side)
+✓ Market data model + CCXT provider        (FR-7, FR-8, FR-11)
+✓ Indicator library + calculator           (FR-12, FR-13)
+✓ Snapshot building                        (FR-14)
+✓ CLI collection pass
+```
+
+Remaining, in order:
+
+```text
+ 1. Per-timeframe persistence               (FR-9, FR-10)
+ 2. Continuity validation                   (FR-28)
+ 3. Deterministic pre-checks                (FR-25)
+ 4. Agent integration: structured output
+    + validator                             (FR-15, FR-17)
+ 5. Agent-run audit records                 (FR-27)
+ 6. Risk engine                             (FR-18)
+ 7. Agent-owned analysis workspace          (FR-19..FR-24)
+ 8. Historical/replay testing (file-backed provider)
+```
+
+**Do not add order execution at any step.**
+
+---
+
+## The boundary to maintain
 
 ```text
               ┌─────────────────────┐
@@ -798,20 +645,20 @@ Think of Hermes as this:
                          │
                          ▼
               ┌─────────────────────┐
-              │ YOUR APPLICATION    │
+              │  APPLICATION (code) │
               │                     │
-              │ Rule validation     │
-              │ Risk calculation   │
-              │ Position sizing    │
-              │ Safety constraints │
+              │ Pre-checks (FR-25)  │
+              │ Output validation   │
+              │ Risk engine (FR-18) │
+              │ Position sizing     │
+              │ Safety constraints  │
               └──────────┬──────────┘
                          │
-                    APPROVED?
+               APPROVED / REJECTED
                          │
                          ▼
-                    Order layer
+              Proposal only — no order layer.
+              Positions open and close manually (FR-24).
 ```
 
-That's the architecture I'd start implementing.
-
-**Your next concrete task should be defining `strategy.md`, `checklist.md`, and `risk-management.md` precisely enough that both Python code and Hermes can consume them.** Once those contracts are stable, the rest of the agent becomes much easier to implement.
+Hermes reasons; the application verifies; nothing executes.

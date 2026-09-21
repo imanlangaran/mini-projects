@@ -10,7 +10,7 @@ market strategy.
 
 | | |
 |---|---|
-| Document | Requirements specification (v1.0) |
+| Document | Requirements specification (v1.1) |
 | Status | Draft — defines *what* the system must do, before further development |
 | Related docs | [ARCHITECTURE.md](./ARCHITECTURE.md) — design and behavior details |
 
@@ -23,10 +23,10 @@ symbols and timeframes the strategies need, then hands that data to an AI
 agent that evaluates a strategy and proposes trades.
 
 The system is **strategy-driven**: the active strategy defines what data
-is required (timeframes, indicators) and how it is interpreted. The core
-never hardcodes preferences — it reads the requirements from the
-strategy and ensures exactly those are collected, calculated and
-delivered.
+is required (symbols, timeframes, indicators) and how it is
+interpreted. The core never hardcodes preferences — it reads the
+requirements from the strategy and ensures exactly those are collected,
+calculated and delivered.
 
 A single symbol may require **multiple timeframes** (e.g. 4h for market
 structure + 1h for price action) and **multiple indicators** (e.g. EMA,
@@ -44,21 +44,22 @@ like this:
 
 **Scenario — "the strategy asks for data, the config makes it runnable":**
 
-1. The strategy requires a set of timeframes — for example **4h, 1h,
-   15m and 1m** — and a set of indicators — for example **MACD,
-   Stochastic and several EMAs**.
+1. The strategy requires a set of timeframes — for example **4h and
+   1h** — and a set of indicators — for example **an EMA, an RSI and a
+   volume SMA**.
 2. The **strategy file declares these requirements** in human- and
    agent-readable form: the timeframes, the indicators, and any other
    config the strategy needs.
 3. The strategy file **references the pythonic config file** of the
    strategy (e.g. a `Config:` pointer in its metadata).
 4. The **pythonic config file defines the same requirements as
-   executable Python**: the timeframes, the minimum candles per
-   timeframe, and the indicator definitions — each indicator is a
-   **function imported from the indicator library** plus its parameters.
+   executable Python**: the symbols, the timeframes, the minimum
+   candles per timeframe, and the indicator definitions — each
+   indicator is a **function imported from the indicator library**
+   plus its parameters.
 5. The **core system requires from this config file**:
-   - it requires the **timeframes** from the config file in order to
-     fetch the data;
+   - it requires the **symbols and timeframes** from the config file
+     in order to fetch the data;
    - it requires the **related functions** (defined and imported from
      the library into the config file) and performs the calculations
      with them.
@@ -68,63 +69,72 @@ like this:
 
 **Concrete example of the scenario:**
 
-*Strategy `price-action` requires timeframes `4h`, `1h`, `15m`, `1m`
-and indicators `EMA(50)`, `RSI(14)`, `MACD(12,26,9)`, `Stoch(14,3,3)`.*
+*Strategy `price-action` requires timeframes `4h`, `1h` and indicators
+`EMA(50)`, `RSI(14)`, `Volume SMA(20)`.*
 
 In the strategy file:
 
 ```markdown
-# Strategy: Price Action
+# Strategy: Support & Resistance Price Action
 
 ## Metadata
 
-- Timeframes: 4h, 1h, 15m, 1m
-- Config: strategies/price-action/config.py   ← reference to the pythonic file
+- Timeframes: 4h, 1h
+- Max open positions: 3
+- Config: price-action (pythonic definitions in `config.py` in this
+  folder; this file and `config.py` MUST stay in sync)
 
 ## Market Data Requirements
 
-The agent MUST have OHLCV data for: 4h, 1h, 15m, 1m.
+The agent MUST have OHLCV data for: 4h, 1h.
 Minimum: 100 candles per timeframe.
 
 ## Indicators
 
 | Indicator | Timeframe | Purpose |
 |---|---|---|
-| EMA(50)   | 4h, 1h   | trend context |
-| RSI(14)   | 1h       | momentum on the confirmation timeframe |
-| MACD(12,26,9) | 4h   | momentum / divergence |
-| Stoch(14,3,3) | 15m  | short-term cyclic position |
+| EMA(50)        | 4h      | trend context on the structure timeframe |
+| RSI(14)        | 1h      | momentum on the confirmation timeframe |
+| Volume SMA(20) | 4h + 1h | participation / volume context |
 ```
 
 In the pythonic config file (same requirements, executable):
 
 ```python
 # strategies/price-action/config.py
-from trading.indicators.library import ema, rsi, macd_line, stoch_k
+from trading.indicators.library import ema, rsi, sma
 from trading.strategy.config import IndicatorSpec
 
-NAME = "Price Action"
+NAME = "Support & Resistance Price Action"
 
-TIMEFRAMES = ("4h", "1h", "15m", "1m")
+SYMBOLS = ("BTC/USDT",)        # CCXT universal symbol format
+EQUITY = 10_000                # account equity used by the risk engine (FR-18)
 
-MIN_CANDLES = {"4h": 100, "1h": 100, "15m": 100, "1m": 100}
+TIMEFRAMES = ("4h", "1h")
+
+MIN_CANDLES = {"4h": 100, "1h": 100}
+
+RISK_PER_TRADE = 0.01          # max risk per trade (fraction of equity)
+MAX_POSITIONS = 3              # max simultaneously open positions per symbol
+
+PARAMS = {"sl_buffer": 0.002, "min_rr": 2.0}   # strategy-specific knobs
 
 INDICATORS = (
-    IndicatorSpec("ema_50", ema,      {"length": 50},           timeframes=("4h", "1h")),
-    IndicatorSpec("rsi_14", rsi,      {"length": 14},           timeframes=("1h",)),
-    IndicatorSpec("macd_line", macd_line, {"fast": 12, "slow": 26, "signal": 9}, timeframes=("4h",)),
-    IndicatorSpec("stoch_k", stoch_k, {"k": 14, "d": 3, "smooth_k": 3},         timeframes=("15m",)),
+    IndicatorSpec("ema_50", ema, {"length": 50}, timeframes=("4h",)),
+    IndicatorSpec("rsi_14", rsi, {"length": 14}, timeframes=("1h",)),
+    # timeframes=None → applied to every declared timeframe (FR-13):
+    IndicatorSpec("volume_sma_20", sma,
+                  {"length": 20, "column": "volume"}, timeframes=None),
 )
 ```
 
 The core then:
 
-- requires `TIMEFRAMES` from the config file and fetches **4h, 1h, 15m
-  and 1m** candles (at least 100 each) for the configured symbols;
-- requires the indicator functions (`ema`, `rsi`, `macd_line`,
-  `stoch_k`) — imported from the library into the config file — and
-  **does the calculations** with them, storing the results under the
-  declared names.
+- requires `SYMBOLS` and `TIMEFRAMES` from the config file and fetches
+  **4h and 1h** candles (at least 100 each) for **BTC/USDT**;
+- requires the indicator functions (`ema`, `rsi`, `sma`) — imported
+  from the library into the config file — and **does the calculations**
+  with them, storing the results under the declared names.
 
 If the strategy file and the config file disagree (e.g. the strategy
 requires `1m` but the config does not declare it), the system must fail
@@ -144,9 +154,9 @@ requirements.
   risk management, invalid-setup conditions, execution rules and the
   agent output format.
 - **FR-2 — Strategy-declared requirements.** The strategy file declares
-  every requirement: timeframes, indicators, and any other config the
-  strategy needs. The agent must not make a decision if required data is
-  missing.
+  every requirement: symbols, timeframes, indicators, and any other
+  config the strategy needs. The agent must not make a decision if
+  required data is missing.
 - **FR-3 — Config reference.** The strategy file references its
   pythonic config file (a `Config:` pointer), so the human/agent
   declaration and the executable definitions are linked.
@@ -154,18 +164,21 @@ requirements.
 ### 3.2 Pythonic config
 
 - **FR-4 — Pythonic config file.** Every strategy has a `config.py`
-  where requirements have meaning in Python code: declared timeframes,
-  minimum candle counts, indicator definitions (library functions +
-  parameters), risk parameters and any strategy-specific knobs.
+  where requirements have meaning in Python code: declared symbols,
+  timeframes, minimum candle counts, indicator definitions (library
+  functions + parameters), risk parameters and any strategy-specific
+  knobs.
 - **FR-5 — Indicators defined in code.** Each indicator in the config is
   a function **imported from the indicator library**, combined with its
   parameters (e.g. `ema` with `length=50`). The config does not
   reimplement indicators; it composes them.
-- **FR-6 — Two-file agreement.** A requirement (timeframe, indicator,
-  config) declared in one file must exist in the other. The loader
-  validates: every timeframe has a min-candle count, indicator names are
-  unique, indicators reference only declared timeframes. Any mismatch
-  **fails the run loudly**.
+- **FR-6 — Two-file agreement.** A requirement (symbol, timeframe,
+  indicator, config) declared in one file must exist in the other. The
+  loader validates: at least one symbol is declared (`SYMBOLS`), every
+  timeframe has a min-candle count, indicator names are unique, and
+  indicators reference only declared timeframes. Any mismatch
+  **fails the run loudly** — there is no "code wins" precedence;
+  agreement is enforced by validation at startup, not by convention.
 
 ### 3.3 Market data collection
 
@@ -173,16 +186,17 @@ requirements.
   behind the `MarketDataProvider` interface (a CCXT-backed exchange for
   now), so the provider can be swapped without touching the core.
 - **FR-8 — Config-driven fetching.** The collector requires the
-  **timeframes from the config file** and fetches exactly those, with at
-  least the configured minimum candles per timeframe. No hardcoded
-  symbols, timeframes or limits in the core.
+  **symbols and timeframes from the config file** (`SYMBOLS`,
+  `TIMEFRAMES`) and fetches exactly those, with at least the configured
+  minimum candles per timeframe. No hardcoded symbols, timeframes or
+  limits in the core.
 - **FR-9 — Incremental sync.** Each run starts from the last candle
   already stored and fetches only the missing history; the stored
   history grows incrementally and is the source of truth.
 - **FR-10 — Separate storage per timeframe.** For every (symbol,
   timeframe), the candle history is stored separately from every other
-  timeframe: the 15m data (OHLCV + its calculated indicators) is kept
-  apart from the 1h data, and so on. Each dataset lives in its own
+  timeframe: the 1h data (OHLCV + its calculated indicators) is kept
+  apart from the 4h data, and so on. Each dataset lives in its own
   store, keyed by (symbol, timeframe) — syncing, rebuilding or dropping
   one timeframe never touches another.
 - **FR-11 — No unfinished candles.** The last (still-forming) candle is
@@ -197,15 +211,22 @@ requirements.
   results under the declared names.
 - **FR-13 — Per-timeframe application.** Each indicator spec declares
   the timeframe(s) it applies to; the calculator computes it only where
-  declared.
+  declared. A spec with `timeframes=None` applies to **all** declared
+  timeframes.
 
 ### 3.5 Analysis and output
 
 - **FR-14 — Market snapshot.** For every (symbol, timeframe) the system
   builds a snapshot: the latest closed candle, the pre-computed
-  indicator values, and the current price.
-- **FR-15 — Agent evaluation.** The agent receives the strategy plus the
-  snapshots, evaluates every required condition, and produces a
+  indicator values, and the current price. The snapshot is delivered
+  together with access to the stored per-timeframe history (§3.6), so
+  the agent's structural analysis (zones, swings, trend) works from the
+  same stored data — the agent never receives or uses data the strategy
+  did not declare (FR-2).
+- **FR-15 — Agent evaluation.** The agent receives the strategy, the
+  snapshots and the pre-check results (FR-25), evaluates every required
+  condition — taking the mechanical checks as given evidence and
+  analyzing the interpretive conditions itself — and produces a
   structured entry/exit/risk proposal backed by evidence (which rule
   passed/failed and why). The agent never invents missing data.
 - **FR-16 — Read-only agent.** The agent evaluates and proposes only: it
@@ -215,28 +236,36 @@ requirements.
   saved result, reproducible from the same inputs (data + strategy).
 - **FR-18 — Deterministic risk engine.** Position sizing, maximum risk
   and risk/reward are verified in deterministic code that can reject a
-  proposal regardless of what the agent says.
+  proposal regardless of what the agent says. For the MVP the account
+  equity is a configuration value (`EQUITY` in the strategy config) —
+  the engine never fetches it from an exchange. Entry candidates get
+  the full checks (sizing, max risk, R/R); exit candidates are checked
+  for validity only (an OPEN position exists in the registry and the
+  strategy's exit rules allow the exit) — exits are not sized.
 
 ### 3.6 Data storage (per timeframe)
 
 To satisfy FR-10, each (symbol, timeframe) dataset is stored as **one
 file per timeframe**, containing the OHLCV candles together with the
 calculated indicator columns of that timeframe. Proposed layout
-(Parquet — see the storage decision in the project notes):
+(Parquet):
 
 ```text
 data/market/
 └── BTC-USDT/
     ├── 4h.parquet      # columns: timestamp, open, high, low, close,
-    ├── 1h.parquet      #          volume, ema_50, rsi_14, ...
-    ├── 15m.parquet
-    └── 1m.parquet      # each file is sorted by timestamp (ascending),
+    └── 1h.parquet      #          volume, ema_50, rsi_14,
+                        #          volume_sma_20, ...
+                        # each file is sorted by timestamp (ascending),
                         # with the last synced candle as the resume point
 ```
 
 Properties:
 
-- **Isolation.** 15m data (OHLCV + indicators) is never mixed with 1h
+- **Symbol form.** Symbols are declared in CCXT universal format
+  (`BTC/USDT`); on disk the `/` is replaced by a dash (`BTC-USDT`), so
+  each symbol is exactly one folder.
+- **Isolation.** 1h data (OHLCV + indicators) is never mixed with 4h
   data; each file is independent and rebuilt from its own history.
 - **Resume point.** The last row of a file is where the next sync
   continues (FR-9).
@@ -321,12 +350,53 @@ Properties:
 
 ---
 
+## 3.8 Run orchestration, decisions and audit
+
+- **FR-25 — Deterministic pre-checks.** Mechanically checkable
+  conditions — required data present (FR-2), the analyzed candle is
+  closed (FR-11), declared indicator values exist (FR-12), R/R
+  arithmetic, risk caps — are evaluated in deterministic code before
+  the agent reasons. The agent evaluates the interpretive conditions
+  (zones, structure, confirmation) and never re-derives the mechanical
+  ones. Either layer can reject a proposal; the risk engine (FR-18)
+  remains the final gate.
+- **FR-26 — Normative decision vocabulary.** The analysis output for a
+  symbol in a run is exactly one of: `NO_TRADE`, `HOLD`,
+  `ENTRY_CANDIDATE`, `EXIT_CANDIDATE` — or `NO_DECISION` when required
+  data is missing (FR-2), which is terminal for that symbol in that
+  run. The risk engine returns `PASS` or `REJECT` on a candidate; a
+  rejected candidate keeps its decision and records
+  `risk_result: REJECT` — there is no separate `RISK_REJECTED`
+  decision. Registry rows use only `CANDIDATE`, `OPEN`, `CLOSED`
+  (§3.7); "NOT OPENED — max reached" (FR-22) is an annotation on a
+  CANDIDATE row, not a status.
+- **FR-27 — Agent-run audit records.** Every run writes one structured
+  record — a JSON file under `data/runs/`, one file per run: run id,
+  timestamp, strategy slug and declared version (from the strategy.md
+  metadata), symbols, references to the input snapshots, agent output,
+  decision, risk result. No database (§6): the record plus the
+  referenced data files (§3.6, §3.7) must be enough to reconstruct and
+  replay the run.
+- **FR-28 — Continuity validation.** On every sync the stored history
+  is checked for continuity — timestamps strictly ascending, spacing
+  consistent with the timeframe. Detected gaps are back-filled from
+  the provider before indicators are recalculated (FR-9, FR-12); a gap
+  that cannot be repaired fails the run loudly. Analysis never runs
+  over a hole in the data.
+
+---
+
 ## 4. How a run works
+
+A run is one full cycle. It is triggered manually (CLI:
+`python -m trading.cli --strategy <slug>`) or by an external scheduler;
+the core never schedules itself.
 
 ```text
 START
  │
  ├── Read active strategy config      ← strategies/<slug>/config.py
+ │     └── Required symbols            (SYMBOLS)
  │     └── Required timeframes         (TIMEFRAMES)
  │     └── Min candles per timeframe   (MIN_CANDLES)
  │     └── Required indicator funcs    (INDICATORS)
@@ -336,11 +406,17 @@ START
  ├── For each (symbol, timeframe):
  │     ├── Read last stored candle        ← where we left off
  │     ├── Fetch missing candles          ← only what we don't have
+ │     ├── Validate continuity, back-fill ← strictly ascending, gapless
+ │     │                                    (FR-28) — fail loud if not
  │     ├── Recalculate indicators         ← funcs from the config, over
  │     │                                    the full updated history
  │     └── Save candles + indicators
  │
  ├── Build market snapshot (latest candles + indicators + current price)
+ │
+ ├── Run deterministic pre-checks       ← data present, candle closed,
+ │                                        indicator values, R/R arithmetic
+ │                                        (FR-25) — abort loudly on failure
  │
  ├── Ask the agent to evaluate the strategy
  │     ├── Read the registry + open position folders
@@ -393,8 +469,13 @@ The requirements above are the contract. Current implementation covers:
 
 - [x] FR-1, FR-2, FR-3 — strategy as markdown, declared requirements,
       config reference (`strategies/price-action/strategy.md`)
-- [x] FR-4, FR-5, FR-6 — pythonic config, library-imported indicator
-      functions, two-file agreement validation (`load_strategy_config`)
+- [x] FR-4, FR-5 — pythonic config, library-imported indicator
+      functions (`load_strategy_config`)
+- [x] FR-6 (config side) — loader validation: SYMBOLS declared,
+      timeframe/min-candle consistency, unique indicator names,
+      indicators reference only declared timeframes
+- [ ] FR-6 (cross-file) — validating strategy.md against config.py
+      before the run starts (FR-6's fail-loud rule, full scope)
 - [x] FR-7, FR-8, FR-11 — provider abstraction, config-driven fetching
       per declared timeframe, unfinished-candle exclusion
 - [x] FR-12, FR-13 — config-driven deterministic indicator calculation
@@ -407,6 +488,8 @@ The requirements above are the contract. Current implementation covers:
 - [ ] FR-19..FR-24 — agent-owned analysis persistence (position
       folders, referenced checklist, anchored knowledge, max open
       positions, per-position evaluation, manual open/close)
+- [ ] FR-25..FR-28 — deterministic pre-checks, normative decision
+      vocabulary, agent-run audit records, continuity validation
 
 ---
 
@@ -417,7 +500,8 @@ TradeAgent/
 ├── README.md                 ← this file (requirements)
 ├── ARCHITECTURE.md           ← design details, agent behavior, risk engine
 ├── src/trading/
-│   ├── cli.py                ← entry point (loads strategy config, collects)
+│   ├── cli.py                ← entry point: python -m trading.cli
+│   │                           --strategy <slug> [--symbol <symbol>]
 │   ├── indicators/
 │   │   ├── library.py        ← deterministic indicator functions
 │   │   └── calculator.py     ← applies the config-declared indicator specs
@@ -432,6 +516,7 @@ TradeAgent/
 │       └── skills/           ← agent skills (markdown)
 ├── data/
 │   ├── market/               ← candles + indicators (§3.6)
-│   └── analysis/             ← agent analysis workspace (§3.7)
+│   ├── analysis/             ← agent analysis workspace (§3.7)
+│   └── runs/                 ← one audit record per run (§3.8, FR-27)
 └── tests/
 ```
