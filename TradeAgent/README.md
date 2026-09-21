@@ -12,7 +12,7 @@ market strategy.
 |---|---|
 | Document | Requirements specification (v1.1) |
 | Status | Draft — defines *what* the system must do, before further development |
-| Related docs | [ARCHITECTURE.md](./ARCHITECTURE.md) — design and behavior details |
+| Related docs | [ARCHITECTURE.md](./ARCHITECTURE.md) — design and behavior details · [SETUP.md](./SETUP.md) — development setup guide |
 
 ---
 
@@ -499,6 +499,9 @@ The requirements above are the contract. Current implementation covers:
 TradeAgent/
 ├── README.md                 ← this file (requirements)
 ├── ARCHITECTURE.md           ← design details, agent behavior, risk engine
+├── SETUP.md                  ← development setup guide for fresh machines
+├── requirements.txt          ← pinned known-good dependencies
+├── chartbridge/              ← AI annotations on MT5 charts (see its README)
 ├── src/trading/
 │   ├── cli.py                ← entry point: python -m trading.cli
 │   │                           --strategy <slug> [--symbol <symbol>]

@@ -1,0 +1,20 @@
+# TradeAgent — pinned known-good set (Python 3.12, see SETUP.md #10)
+# install: pip install -r requirements.txt
+
+# --- analysis core (src/trading, strategies, tests) ---
+ccxt==4.5.78
+pandas==3.0.6
+pandas-ta-classic==0.8.32
+pydantic==2.13.5
+requests==2.34.2
+
+# --- chartbridge (bridge server + agent client) ---
+fastapi==0.141.1
+uvicorn==0.53.0
+httpx==0.28.1
+
+# --- tests ---
+pytest==9.1.1
+
+# --- optional, Windows only (MT5 market-data backend) ---
+# pip install MetaTrader5
