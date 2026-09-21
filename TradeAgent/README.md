@@ -246,6 +246,79 @@ Properties:
   if the indicator set changes, the OHLCV columns stay untouched and
   indicators are simply recomputed and rewritten in place.
 
+### 3.7 Analysis persistence (agent-managed)
+
+The analysis layer is **owned by the agent** (Hermes). Because the
+agent has direct file read/write access, it performs the "load previous
+analysis" and "store agent-derived knowledge" steps itself. The system
+defines a **predefined folder structure** that the agent MUST use; the
+core only guarantees the folder exists and points the agent at it — the
+core never reads or writes these files itself.
+
+```text
+data/analysis/
+└── BTC-USDT/                        # one folder per symbol
+    ├── registry.md                  # open-position index — SOURCE OF TRUTH:
+    │                                #   edited by the user directly, or by the
+    │                                #   agent on the user's instruction
+    │                                #   id, status (CANDIDATE/OPEN/CLOSED),
+    │                                #   opened at, entry, SL, TP, folder
+    ├── knowledge/                   # cross-run state, agent-maintained
+    │   ├── zones.md                 # support/resistance: zone high/low,
+    │   │                            #   test count, most recent reaction,
+    │   │                            #   as-of anchor, validity trigger
+    │   └── trend.md                 # trend + swing points used, as-of anchor
+    └── positions/                   # one FOLDER per position
+        ├── P-0001/                  # id assigned from the registry
+        │   ├── checklist.md         # cumulative checklist from the strategy:
+        │   │                        #   item, status, checked at, reference
+        │   │                        #   to the analysis file that checked it
+        │   └── analysis-2026-09-21T10-00.md   # one .md per run / snapshot
+        └── P-0002/
+```
+
+Properties:
+
+- **FR-19 — Agent-owned persistence.** Every run starts with the agent
+  reading the symbol's open positions and previous analyses
+  (`data/analysis/<symbol>/` — registry, position folders, knowledge)
+  plus the strategy skills (`strategies/<slug>/skills/`), and ends
+  with the agent writing the run's results back into the same
+  structure: appended analyses, updated checklists, registry and
+  knowledge. No other component touches these files.
+- **FR-20 — Position folders, referenced checklist.** Every open
+  position is a folder under `positions/`. Each run that evaluates the
+  position appends **one analysis markdown file** to its folder and
+  updates the folder's `checklist.md`: every item (defined by the
+  strategy) carries its status, the time it was checked, and a
+  **reference to the analysis file** that checked it. New analyses
+  expand on prior ones — they reference, never copy, previous analyses
+  and knowledge, so no data is duplicated across runs.
+- **FR-21 — Anchored, invalidatable knowledge.** Knowledge entries
+  (zones, trend, ...) are persisted with an **as-of anchor** (timestamp
+  + candle index of the data they were derived from) and a **validity
+  trigger**. Principle: *persist agent analysis with an as-of anchor
+  (timestamp + candle index) and a validity trigger; re-derive only
+  what is stale or invalidated.* An entry whose trigger fired (e.g.
+  price broke the zone) is stale and MUST be re-derived; an entry
+  simply confirmed again is reused and its test count incremented.
+- **FR-22 — Maximum open positions.** Every strategy defines
+  `MAX_POSITIONS` — in `config.py` (executable) and declared in
+  `strategy.md` (agent-readable). The agent must never open more
+  positions than the limit. Above it, the run still evaluates the new
+  entry and saves its analysis, but the registry row is noted
+  "NOT OPENED — max reached" instead of opening the position.
+- **FR-23 — Positions analyzed separately.** Multiple open positions
+  are evaluated one by one in the same run — each gets its own
+  analysis file and checklist update in its own folder; the results of
+  one position never leak into another.
+- **FR-24 — Positions open only manually.** The agent never opens a
+  position by itself; an entry analysis is only a proposal. A new
+  position moves from CANDIDATE to OPEN only when the user opens it —
+  by editing `registry.md` directly, or by telling the agent ("I
+  opened the position ...") so the agent records it in the registry
+  and materializes the folder. Closing works the same way.
+
 ---
 
 ## 4. How a run works
@@ -270,8 +343,17 @@ START
  ├── Build market snapshot (latest candles + indicators + current price)
  │
  ├── Ask the agent to evaluate the strategy
+ │     ├── Read the registry + open position folders
+ │     ├── For EACH open position: evaluate it with the new snapshot,
+ │     │   append an analysis md to its folder, update its checklist
+ │     │   with references (FR-20, FR-23)
+ │     ├── Re-derive only what is stale or invalidated (FR-21)
+ │     ├── Evaluate the snapshot for a NEW position and save its
+ │     │   folder + analysis md; the row starts as CANDIDATE, or
+ │     │   "NOT OPENED — max reached" (FR-22, FR-24)
+ │     └── Update the registry and knowledge files (FR-19)
  │
- └── Save the analysis / proposal
+ └── Save the agent-run record (audit only)
 ```
 
 ---
@@ -291,6 +373,9 @@ START
   saved results.
 - **Reproducible.** The same market data and strategy must produce the
   same deterministic layers (collection, calculation, risk).
+- **Agent-owned persistence.** The agent (Hermes) reads and writes its
+  analysis directly in the predefined workspace (§3.7); the core only
+  provides the folder and the data and never rewrites agent knowledge.
 
 ---
 
@@ -319,6 +404,9 @@ The requirements above are the contract. Current implementation covers:
       per-timeframe storage (one store per (symbol, timeframe))
 - [ ] FR-15, FR-17 — agent evaluation loop and saved proposals
 - [ ] FR-18 — deterministic risk engine
+- [ ] FR-19..FR-24 — agent-owned analysis persistence (position
+      folders, referenced checklist, anchored knowledge, max open
+      positions, per-position evaluation, manual open/close)
 
 ---
 
@@ -342,5 +430,8 @@ TradeAgent/
 │       ├── strategy.md       ← rules & requirements (humans + agent)
 │       ├── config.py         ← executable requirements (for the core)
 │       └── skills/           ← agent skills (markdown)
+├── data/
+│   ├── market/               ← candles + indicators (§3.6)
+│   └── analysis/             ← agent analysis workspace (§3.7)
 └── tests/
 ```

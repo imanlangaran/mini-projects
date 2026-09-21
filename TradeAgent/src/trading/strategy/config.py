@@ -59,6 +59,7 @@ class StrategyConfig:
     min_candles: dict[str, int]
     indicators: tuple[IndicatorSpec, ...]
     risk_per_trade: float = 0.01
+    max_positions: int = 1
     params: dict[str, Any] = field(default_factory=dict)
 
     def indicators_for(self, timeframe: str | None = None) -> tuple[IndicatorSpec, ...]:
@@ -98,6 +99,8 @@ def load_strategy_config(slug: str, base_dir: Path | None = None) -> StrategyCon
     - ``MIN_CANDLES``: dict[str, int]  (per timeframe)
     - ``INDICATORS``: tuple[IndicatorSpec, ...]
     - ``RISK_PER_TRADE``: float (default 0.01)
+    - ``MAX_POSITIONS``: int (default 1) — cap on simultaneously open
+      positions per symbol (agent-enforced; read by the run loop)
     - ``PARAMS``: dict[str, Any] (strategy-specific knobs, default {})
 
     Raises ``ValueError`` with a descriptive message when the module is
@@ -164,6 +167,7 @@ def load_strategy_config(slug: str, base_dir: Path | None = None) -> StrategyCon
         min_candles=min_candles,
         indicators=indicators,
         risk_per_trade=float(getattr(module, "RISK_PER_TRADE", 0.01)),
+        max_positions=int(getattr(module, "MAX_POSITIONS", 1)),
         params=dict(getattr(module, "PARAMS", {})),
     )
 

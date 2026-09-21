@@ -40,6 +40,8 @@ For a bullish trend:
 - The line must extend toward the current price.
 - Record the swing points used.
 - Record the trendline price at the current candle.
+- Persist the records in `data/analysis/<symbol>/knowledge/trend.md`
+  with an as-of anchor and validity trigger (README §3.7, FR-21).
 
 Example:
 

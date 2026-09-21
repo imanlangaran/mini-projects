@@ -61,6 +61,7 @@ class TestConfigLoading:
         assert config.timeframes == ("4h", "1h")
         assert config.min_candles == {"4h": 100, "1h": 100}
         assert config.risk_per_trade == 0.01
+        assert config.max_positions == 3
         assert config.params == {"sl_buffer": 0.002, "min_rr": 2.0}
 
     def test_indicator_declarations(self):

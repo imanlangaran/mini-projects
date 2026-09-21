@@ -10,6 +10,7 @@
   indicators and parameters; this file and `config.py` MUST stay in sync)
 - Direction: Long and Short
 - Risk per trade: 1%
+- Max open positions: 3
 - Status: active
 
 ---
@@ -111,12 +112,13 @@ A support zone can be identified when:
 
 Support should be treated as a ZONE, not an exact price.
 
-The agent must record:
+The agent must record (persist in `data/analysis/<symbol>/knowledge/zones.md`):
 
 - Zone high
 - Zone low
 - Number of tests
 - Most recent reaction
+- As-of anchor + validity trigger (README §3.7, FR-21)
 
 ---
 
@@ -131,12 +133,13 @@ A resistance zone can be identified when:
 
 Resistance should be treated as a ZONE, not an exact price.
 
-The agent must record:
+The agent must record (persist in `data/analysis/<symbol>/knowledge/zones.md`):
 
 - Zone high
 - Zone low
 - Number of tests
 - Most recent reaction
+- As-of anchor + validity trigger (README §3.7, FR-21)
 
 ---
 
@@ -364,6 +367,28 @@ Do NOT trade when:
 - Risk/Reward < 1:2.
 - The market structure conflicts strongly with the setup.
 - Required data is unavailable.
+
+---
+
+## Checklist
+
+The per-position checklist
+(`data/analysis/<symbol>/positions/<id>/checklist.md`) mirrors this
+strategy with stable IDs:
+
+| ID | Item | Source |
+|---|---|---|
+| E1–E6 | Long Required Conditions (all six) | Long Setup |
+| S1–S6 | Short Required Conditions (all six) | Short Setup |
+| C1 | Confirmation candle CLOSED (never unfinished) | Entry |
+| C2 | Stop-loss at a logical invalidation point | Stop Loss |
+| C3 | Risk/Reward >= 1:2 | Take Profit |
+| C4 | No invalid-setup condition fired | Invalid Setup Conditions |
+| C5 | Trade management rules respected | Trade Management |
+
+Every checked row carries a reference to the analysis file of the run
+that checked it (README §3.7, FR-20); rows are updated, never
+duplicated.
 
 ---
 

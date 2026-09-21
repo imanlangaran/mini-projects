@@ -8,6 +8,7 @@
 - Timeframes: <e.g. 1h, 15m>
 - Direction: <long | short | both>
 - Risk per trade: <e.g. 1%>
+- Max open positions: <number>
 - Status: active
 - Config: <slug> — the pythonic definitions (timeframes, minimum
   candles, indicator functions and parameters) live in
@@ -218,6 +219,55 @@ The agent:
 8. MUST provide entry, stop loss, take profit, and invalidation.
 9. MUST state confidence separately from rule satisfaction.
 10. MUST NOT override strategy rules based on intuition.
+
+---
+
+## Checklist
+
+The per-position checklist
+(`data/analysis/<symbol>/positions/<id>/checklist.md`) mirrors the
+conditions of this strategy. Give every item a **stable ID** so
+references between checklist rows and analysis files stay valid across
+runs:
+
+| ID | Item | Source section |
+|---|---|---|
+| E1 | ... | Entry Conditions — Long |
+| S1 | ... | Entry Conditions — Short |
+| ... | ... | ... |
+
+Each run the agent checks the items against the new snapshot, updates
+the row's status, and writes a reference to that run's analysis file.
+Rows are updated, never duplicated; new rows are added only when the
+strategy changes.
+
+---
+
+## Persistent State
+
+The agent persists its analysis in the predefined analysis workspace
+(the layout contract: README §3.7, FR-19..FR-24):
+
+- `data/analysis/<symbol>/registry.md` — the index of positions
+  (id, status CANDIDATE/OPEN/CLOSED, entry, SL, TP, folder). Source of
+  truth: the user edits it directly, or tells the agent that a position
+  was opened/closed and the agent records it.
+- `data/analysis/<symbol>/positions/<id>/` — one folder per position:
+  - `analysis-<timestamp>.md` — one file per run that evaluates this
+    position (new snapshot, status changes, deltas only);
+  - `checklist.md` — the cumulative checklist from the strategy's
+    Checklist section; every row: item, status, checked at, and a
+    **reference to the analysis file** that checked it.
+- `data/analysis/<symbol>/knowledge/*.md` — cross-run state (zones,
+  trend, ...). Every entry carries an **as-of anchor** (timestamp +
+  candle index) and a **validity trigger**: reuse while valid,
+  re-derive when stale or invalidated.
+
+Multiple open positions are analyzed separately. A new position folder
+is created only when the agent evaluates a new entry (respecting the
+strategy's max open positions). Every "the agent must record" field in
+this strategy (e.g. zone high/low, number of tests, most recent
+reaction) is a knowledge-store entry, not only a one-run output.
 
 ---
 

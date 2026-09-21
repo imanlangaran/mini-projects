@@ -514,6 +514,16 @@ START
  ├── Run deterministic checks
  │
  ├── Ask Hermes for market analysis
+ │     ├── Hermes reads the registry + open position folders
+ │     │     (data/analysis/<symbol>/) and the strategy skills
+ │     ├── For EACH open position: Hermes appends an analysis md
+ │     │     to the position folder and updates its checklist
+ │     │     with references to that analysis
+ │     ├── Hermes evaluates the snapshot for a new position and
+ │     │     creates its folder (registry row: CANDIDATE, or
+ │     │     NOT OPENED when MAX_POSITIONS is full)
+ │     └── Hermes updates knowledge entries, each with
+ │           an as-of anchor (knowledge/*.md)
  │
  ├── Validate Hermes output
  │
@@ -568,6 +578,60 @@ This is important because later you can ask:
 > Why did the agent recommend this trade?
 
 You can reconstruct the exact run.
+
+### 12.1 Analysis workspace (Hermes-managed)
+
+On top of the audit record, Hermes runs its own persistence: it has
+direct file access, so it performs the "load previous analysis" and
+"store agent-derived knowledge" steps itself. The layout is the
+predefined contract (full definition: README §3.7, FR-19..FR-24):
+
+```text
+data/analysis/<symbol>/
+├── registry.md   open-position index — source of truth, edited by
+│                 the user directly or by Hermes on the user's
+│                 instruction: id, status (CANDIDATE/OPEN/CLOSED),
+│                 opened at, entry, SL, TP, folder
+├── knowledge/    zones.md, trend.md — cross-run state. Every entry
+│                 carries an as-of anchor (timestamp + candle index)
+│                 and a validity trigger; status: VALID / STALE
+└── positions/
+    └── P-0001/   one folder per position:
+        ├── checklist.md     cumulative strategy checklist; each row:
+        │                    item, status, checked at, reference
+        │                    to the analysis file that checked it
+        └── analysis-*.md    one file per run that evaluates this position
+```
+
+Rule of thumb:
+
+> **Persist agent analysis with an "as-of" anchor (timestamp + candle
+> index) and a validity trigger; re-derive only what is stale or
+> invalidated.**
+
+A persisted zone is reused while valid — price revisiting it
+increments its test count — and is re-derived only when its trigger
+fires (e.g. price broke through the zone) or the underlying candles
+changed. The deterministic checklist is re-evaluated in code every run
+(cheap); the agent's structural analysis (zones, trend, swing points)
+is what gets persisted.
+
+Positions are tracked as folders under `positions/`: one folder per
+position, each with a cumulative `checklist.md` and one analysis file
+per run. Multiple open positions are evaluated separately — one run
+produces one analysis per open position — and a new entry is evaluated
+every run with the newest snapshot. Its registry row starts as
+CANDIDATE and is only opened when the strategy allows it
+(`MAX_POSITIONS`, declared in `config.py` and `strategy.md`); at the
+limit the analysis is still saved, noted "NOT OPENED — max reached".
+
+For the MVP, positions open and close MANUALLY — Hermes never executes
+orders. A new-position evaluation creates the folder and a registry
+row with status CANDIDATE; the user then opens the position either by
+editing `registry.md` directly or by telling Hermes ("I opened the
+position at ..."), and Hermes updates the row to OPEN (entry, SL, TP,
+opened at) and monitors it like any other position. The same
+instruction path closes a position.
 
 ---
 

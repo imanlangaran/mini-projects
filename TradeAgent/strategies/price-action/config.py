@@ -41,6 +41,10 @@ MIN_CANDLES = {
 #: strategy.md: "Maximum risk per trade: 1% of account equity."
 RISK_PER_TRADE = 0.01
 
+#: Maximum simultaneously open positions per symbol.
+#: strategy.md: "Max open positions: 3" — keep the two in sync.
+MAX_POSITIONS = 3
+
 #: Strategy-specific knobs used by the agent / risk rules.
 PARAMS = {
     "sl_buffer": 0.002,  # 0.2% buffer below/above the invalidation point
