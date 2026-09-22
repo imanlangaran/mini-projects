@@ -291,8 +291,8 @@ ANALYSIS WORKSPACE    data/analysis/<symbol>/ — registry, positions,
 
 ## 8. Agent tools
 
-First version — read-only, no side effects outside the analysis
-workspace:
+First version — read-only over market data, deterministic over the
+analysis workspace, no side effects anywhere else:
 
 ```text
 get_market_snapshot
@@ -303,6 +303,20 @@ read_analysis_workspace
 write_analysis_workspace   (FR-19: analyses, checklists, registry,
                             knowledge — only under data/analysis/)
 ```
+
+Since Phase D the workspace half is concrete — `trading.analysis`:
+
+- `workspace.scaffold_workspace()` — guarantees the predefined layout
+  exists (the run calls it before the agent; idempotent);
+- `tools.AnalysisTools` — the bound per-symbol surface Hermes uses:
+  registry lifecycle (`register_candidate` / `record_open` /
+  `record_close`, FR-24 — manual open/close, nothing executes orders),
+  the FR-22 "NOT OPENED — max reached" annotation,
+  `append_analysis` + `update_checklist` (FR-20) with the FR-23
+  guarantee that a position write stays inside its own folder;
+- `registry` read-side facts — `symbol_has_open_position`,
+  `open_positions`, `max_open_reached` — feed the loop context and the
+  FR-18 `position_state` fact.
 
 Never provided:
 
@@ -485,6 +499,19 @@ The full, normative layout and its rules are **README §3.7
 (FR-19..FR-24)** — that section is the contract; this document does
 not duplicate it.
 
+Since Phase D this workspace is code-backed (`trading.analysis`): the
+run scaffolds it before the agent is called (`workspace.py`, idempotent
+— an existing `registry.md` is never overwritten) and hands the agent
+a deterministic tool surface (`tools.AnalysisTools`) for the registry
+lifecycle (CANDIDATE/OPEN/CLOSED, the FR-22 "NOT OPENED — max reached"
+annotation), per-position analysis appends and checklist updates with
+analysis-file references. `registry.py` exposes the read-side facts the
+core consumes — `symbol_has_open_position` / `open_positions` /
+`max_open_reached` — and the FR-18 `position_state` fact now defaults
+to the registry. The core records only *where* the agent works
+(`analysis_workspace` pointers in the FR-27 record), never *what* the
+agent wrote there.
+
 Rule of thumb (FR-21):
 
 > **Persist agent analysis with an "as-of" anchor (timestamp + candle
@@ -517,6 +544,12 @@ Since Phase C the CLI runs the full loop: collection → pre-check gate
 the live Hermes backend arrives with the Phase D tool surface) → FR-26
 validation → risk engine → one FR-27 audit record under `data/runs/`.
 A run without `--scripted` fails loud: no agent backend is wired yet.
+
+Since Phase D the run also scaffolds the agent-owned analysis
+workspace per symbol (`data/analysis/<symbol>/`, FR-19), passes its
+tools to the agent, sources OPEN positions from `registry.md`
+(FR-24), and prints the workspace root + OPEN positions per symbol;
+the FR-27 record carries the `analysis_workspace` pointers.
 
 The target output of a full run (ARCHITECTURE §13):
 
@@ -635,8 +668,8 @@ Remaining, in order:
     + validator                             (FR-15, FR-17) ✓
  3. Agent-run audit records                 (FR-27) ✓
  4. Risk engine                             (FR-18) ✓
- 5. Agent-owned analysis workspace          (FR-19..FR-24) — next
- 6. Historical/replay testing (file-backed provider)
+ 5. Agent-owned analysis workspace          (FR-19..FR-24) ✓
+ 6. Historical/replay testing (file-backed provider) — next
 ```
 
 **Do not add order execution at any step.**

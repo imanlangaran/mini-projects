@@ -16,7 +16,7 @@
 | A | Per-timeframe persistence + continuity validation | FR-9, FR-10, FR-28 | ✅ done |
 | B | Deterministic pre-checks (configurable registry) | FR-25 | ✅ done |
 | C | Agent loop: structured output, audit records, risk engine | FR-15, FR-17, FR-27, FR-18 | ✅ done |
-| D | Agent-owned analysis workspace | FR-19..FR-24 | ⬜ next |
+| D | Agent-owned analysis workspace | FR-19..FR-24 | ✅ done |
 | E | Replay testing (file-backed provider) | ARCHITECTURE §14 | ⬜ |
 
 Non-goals (never in scope): order execution, DB / web UI / backtesting,
@@ -224,7 +224,7 @@ risk engine (FR-18) as the final gate.
       smoke test without network (fake provider + scripted agent).
 - [x] Full suite green: 152 core + 37 chartbridge.
 
-## Phase D — Agent-owned analysis workspace (FR-19..FR-24)
+## Phase D — Agent-owned analysis workspace (FR-19..FR-24) — ✅ done
 
 ### Goal
 
@@ -245,8 +245,37 @@ knowledge.
 
 ### Exit criteria
 
-- [ ] Test 4 flow: open position evaluated in its own folder; checklist
+- [x] Test 4 flow: open position evaluated in its own folder; checklist
       rows carry references; no cross-position leakage (FR-23).
+
+### Delivered
+
+- `src/trading/analysis/workspace.py` — `WorkspacePaths` +
+  `scaffold_workspace()` (idempotent; existing `registry.md` never
+  overwritten, FR-19). `ANALYSIS_SUBDIR = "analysis"`; symbol folders
+  reuse the storage convention (`/` → `-`).
+- `src/trading/analysis/registry.py` — markdown-table registry:
+  `register_candidate()` (CANDIDATE row, FR-22 "NOT OPENED — max
+  reached" annotation when `max_open_reached`, stale annotations
+  cleared when capacity frees), `record_open()` (OPEN + position
+  folder scaffolding), `record_close()` (CLOSED; fails loud on
+  unknown ids / wrong lifecycle), read-side facts
+  (`symbol_has_open_position`, `open_positions`, `max_open_reached`).
+- `src/trading/analysis/tools.py` — `AnalysisTools`, the bound
+  per-symbol tool surface Hermes uses (FR-20: `append_analysis`,
+  `update_checklist` with analysis-file references; FR-23: writes
+  only inside the position's own folder; FR-24: lifecycle calls only —
+  nothing executes orders) + `AnalysisContext` handed to the agent.
+- Loop wiring: `run_agent_evaluation` scaffolds per symbol, builds the
+  context (workspace root, OPEN ids, `max_open_reached`, folders) and
+  passes it with the tools; `position_state` now defaults to the
+  registry (FR-24 — the registry is the source of truth); FR-27
+  records carry `analysis_workspace` pointers (folders only).
+- CLI: run output reports the workspace root + OPEN positions.
+- Tests: `tests/test_analysis_registry.py` (28),
+  `tests/test_analysis_tools.py` (17), `tests/test_phase_d_loop.py`
+  (13, incl. the Test 4 flow) + a CLI end-to-end scaffold test.
+  Full suite: 211 core + 37 chartbridge green.
 
 ## Phase E — Historical / replay testing (file-backed provider)
 

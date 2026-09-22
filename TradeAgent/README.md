@@ -491,8 +491,7 @@ The requirements above are the contract. Current implementation covers:
       (`trading.agent.loop`: pre-check gate → agent → FR-26 schema
       validation (`trading.agent.schema`, malformed responses rejected
       and recorded, Test 5) → FR-18 risk gate; scripted backend
-      (`trading.agent.scripted`) stands in for the live agent until
-      the Phase D tool surface)
+      (`trading.agent.scripted`) stands in for the live Hermes agent)
 - [x] FR-18 — deterministic risk engine (`trading.risk.engine`: entry
       candidates sized from `EQUITY × RISK_PER_TRADE / |entry − SL|`,
       max-risk + min-R/R gates; exit candidates validity-only, never
@@ -502,9 +501,16 @@ The requirements above are the contract. Current implementation covers:
 - [x] FR-25 — deterministic pre-checks (configurable registry:
       `trading.checks.prechecks`, wired into the CLI before the agent
       call; `PRECHECKS` in the strategy config selects/tunes checks)
-- [ ] FR-19..FR-24 — agent-owned analysis persistence (position
-      folders, referenced checklist, anchored knowledge, max open
-      positions, per-position evaluation, manual open/close)
+- [x] FR-19..FR-24 — agent-owned analysis persistence (`trading.analysis`:
+      `data/analysis/<symbol>/` scaffolded every run (FR-19:
+      `registry.md`, `knowledge/`, `positions/<id>/`); the deterministic
+      tool surface Hermes uses — registry row lifecycle CANDIDATE/OPEN/
+      CLOSED with the FR-22 "NOT OPENED — max reached" annotation,
+      per-position analysis append + referenced checklist rows (FR-20),
+      writes confined to the position's own folder (FR-23); the
+      registry is the source of truth for OPEN positions (FR-24) and
+      feeds the FR-18 `position_state` fact; manual open/close only —
+      nothing executes orders)
 - [x] FR-26, FR-27 — normative decision vocabulary enforced in the
       output schema (`trading.agent.schema`) and one audit record per
       run under `data/runs/` (`trading.runs.records`, per-symbol
@@ -526,6 +532,10 @@ TradeAgent/
 ├── src/trading/
 │   ├── cli.py                ← entry point: python -m trading.cli
 │   │                           --strategy <slug> [--symbol <symbol>]
+│   ├── analysis/             ← agent-owned workspace, code-backed (FR-19..FR-24)
+│   │   ├── workspace.py      ← paths + idempotent scaffolding (FR-19)
+│   │   ├── registry.py       ← registry.md lifecycle CANDIDATE/OPEN/CLOSED
+│   │   └── tools.py          ← AnalysisTools + AnalysisContext for the agent
 │   ├── indicators/
 │   │   ├── library.py        ← deterministic indicator functions
 │   │   └── calculator.py     ← applies the config-declared indicator specs
