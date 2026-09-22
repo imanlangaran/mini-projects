@@ -51,6 +51,24 @@ PARAMS = {
     "min_rr": 2.0,       # minimum reward/risk ratio, 1:2
 }
 
+#: Deterministic pre-checks (FR-25) — optional. Select the enabled
+#: checks (subset of the registry in trading/checks/prechecks.py) and
+#: tune thresholds. Default: all registered checks, min_rr from
+#: PARAMS["min_rr"], risk cap from RISK_PER_TRADE. Unknown names fail
+#: the run loudly.
+# PRECHECKS = {
+#     "enabled": (
+#         "required_data_present",
+#         "candle_closed",
+#         "indicator_values_present",
+#         "current_price_valid",
+#         "rr_arithmetic",
+#         "risk_cap",
+#     ),
+#     "min_rr": 2.0,            # override PARAMS["min_rr"] for the gate
+#     "risk_cap_percent": 1.0,  # override RISK_PER_TRADE*100 for the gate
+# }
+
 #: Indicators to compute, per timeframe. Each function comes from
 #: ``trading.indicators.library`` and is applied as
 #: ``func(dataframe, **params)``; the result is stored under ``name``.

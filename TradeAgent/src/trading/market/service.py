@@ -113,14 +113,19 @@ class MarketDataService:
         existing = store.load()
         resume = store.last_timestamp()
 
-        # FR-9: fetch only what we don't have yet
+        # FR-9: fetch only what we don't have yet. Request one more than
+        # MIN_CANDLES on the initial load: the newest returned candle is
+        # still forming (FR-11) and is dropped below, so the store ends up
+        # with at least MIN_CANDLES *closed* candles (FR-8).
         if resume is None:
-            candles = self.provider.get_candles(symbol, timeframe, limit=min_candles)
+            candles = self.provider.get_candles(
+                symbol, timeframe, limit=min_candles + 1
+            )
             fetched = candles_to_frame(candles)
         else:
             now = datetime.now(timezone.utc)
             elapsed_frames = int((now - resume).total_seconds() / period.total_seconds())
-            limit = max(min_candles, elapsed_frames + 2)
+            limit = max(min_candles + 1, elapsed_frames + 2)
             candles = self.provider.get_candles(
                 symbol, timeframe, limit=limit, since=resume
             )

@@ -14,8 +14,8 @@
 |---|---|---|---|
 | — | Environment setup (venv, pinned deps, 66 tests) | SETUP.md | ✅ done |
 | A | Per-timeframe persistence + continuity validation | FR-9, FR-10, FR-28 | ✅ done |
-| B | Deterministic pre-checks | FR-25 | ⬜ next |
-| C | Agent loop: structured output, audit records, risk engine | FR-15, FR-17, FR-27, FR-18 | ⬜ |
+| B | Deterministic pre-checks (configurable registry) | FR-25 | ✅ done |
+| C | Agent loop: structured output, audit records, risk engine | FR-15, FR-17, FR-27, FR-18 | ⬜ next |
 | D | Agent-owned analysis workspace | FR-19..FR-24 | ⬜ |
 | E | Replay testing (file-backed provider) | ARCHITECTURE §14 | ⬜ |
 
@@ -95,7 +95,7 @@ pattern as `TRADEAGENT_STRATEGIES_DIR`).
 
 ---
 
-## Phase B — Deterministic pre-checks (FR-25)
+## Phase B — Deterministic pre-checks (FR-25) — ✅ done
 
 ### Goal
 
@@ -105,18 +105,50 @@ reasons: required data present (FR-2/FR-8), analyzed candle closed
 risk caps. Failure ⇒ `NO_DECISION` for that symbol (FR-26) — no agent
 evaluation ever runs over missing or discontinuous data.
 
-### Outline
+### Design (as built)
 
-- `src/trading/checks/prechecks.py` — `PreCheckResult(name, passed,
-  evidence)`, `run_prechecks(config, snapshots)`.
-- Wired into the CLI run flow between snapshot building and the agent
-  call (ARCHITECTURE §11).
+- `src/trading/checks/prechecks.py` — a **configurable registry**:
+  - `CHECKS` + `register_check(name, terminal, description)` — check
+    functions take a `PreCheckContext` (config, symbol, snapshots,
+    effective `PreChecksConfig`, optional `Candidate`, `now`) and
+    return `(passed, evidence)`. Strategies can register custom checks.
+  - Built-in checks: `required_data_present` (per-timeframe snapshots,
+    `MIN_CANDLES` closed candles — terminal), `candle_closed`
+    (latest candle's close time has passed, 5 s clock-skew tolerance —
+    terminal), `indicator_values_present` (every declared indicator has
+    a value, warm-up None fails — terminal), `current_price_valid`
+    (positive price — terminal), `rr_arithmetic` (recomputed R/R from
+    entry/SL/TP vs declared, level ordering, `min_rr` — non-terminal),
+    `risk_cap` (declared risk % vs `RISK_PER_TRADE` — non-terminal).
+  - `PreChecksConfig.from_strategy(config)` — resolves the strategy's
+    optional `PRECHECKS` dict: `enabled` (subset of registered names;
+    default all), `min_rr`, `risk_cap_percent` overrides; unknown names
+    fail loudly.
+  - `run_prechecks(config, snapshots, symbol=, candidate=, now=)` →
+    `PreCheckReport` with per-check `PreCheckResult(name, passed,
+    evidence, terminal)` and a gate `decision`: all pass → `PROCEED`
+    (agent may evaluate); any non-terminal failure → `NO_TRADE`;
+    any terminal failure → `NO_DECISION`. `to_dict()` is the
+    structured form for the agent input and the FR-27 audit record.
+- `MarketSnapshot.candle_count` — closed-candle count behind the
+  snapshot, so `MIN_CANDLES` is verified without touching files.
+- `StrategyConfig.prechecks` + loader validation (must be a dict).
+- CLI: pre-checks run after snapshot building, before the (future)
+  agent call (ARCHITECTURE §11).
+- Collector fix found by the gate: initial load fetches
+  `MIN_CANDLES + 1` — the forming candle is dropped (FR-11), so the
+  store keeps exactly `MIN_CANDLES` closed candles (FR-8/config).
 
 ### Exit criteria
 
-- [ ] Test 1 / Test 2 / Test 6 semantics: all-pass → proceed; one
-      condition fails → `NO_TRADE`; required data missing →
-      `NO_DECISION`; nothing is silently skipped.
+- [x] Test 1 / Test 2 / Test 6 semantics: all-pass → PROCEED; one
+      non-terminal condition fails → `NO_TRADE`; required data missing
+      → `NO_DECISION`; nothing is silently skipped (every enabled
+      check always runs and appears in the report with evidence).
+- [x] Configurability: `PRECHECKS['enabled']` subset, threshold
+      overrides (`min_rr`, `risk_cap_percent`), unknown-check
+      fail-loud, custom `register_check` extension (tested).
+- [x] Full suite green: 57 core + 37 chartbridge.
 
 ## Phase C — Agent evaluation loop, audit, risk engine (FR-15, FR-17, FR-27, FR-18)
 

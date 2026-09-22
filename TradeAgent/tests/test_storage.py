@@ -164,9 +164,10 @@ class TestIncrementalSync:
 
         service.get_strategy_snapshots("BTC/USDT", config)
 
-        # First run: full fetch, no `since`.
+        # First run: full fetch (MIN_CANDLES + 1 — the forming candle is
+        # dropped), no `since`.
         assert provider.calls[0][3] is None
-        assert provider.calls[0][2] == 100
+        assert provider.calls[0][2] == 101
 
         # Capture the resume point BEFORE the second run.
         store = CandleStore("BTC/USDT", "4h", base_dir=tmp_path)
@@ -298,4 +299,4 @@ class TestContinuity:
         assert snapshot.timeframe == "1h"
         store = CandleStore("ETH/USDT", "1h", base_dir=tmp_path)
         assert store.exists()
-        assert len(store.load()) == 24  # 25 fetched, forming candle dropped
+        assert len(store.load()) == 25  # 26 fetched (limit+1), forming dropped

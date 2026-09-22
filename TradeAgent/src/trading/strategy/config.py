@@ -61,6 +61,9 @@ class StrategyConfig:
     risk_per_trade: float = 0.01
     max_positions: int = 1
     params: dict[str, Any] = field(default_factory=dict)
+    #: Deterministic pre-checks selection/tuning (FR-25); ``None`` → all
+    #: registered checks with defaults. See ``trading.checks.prechecks``.
+    prechecks: dict[str, Any] | None = None
 
     def indicators_for(self, timeframe: str | None = None) -> tuple[IndicatorSpec, ...]:
         """Indicators that apply to ``timeframe`` (all if ``None``)."""
@@ -102,6 +105,8 @@ def load_strategy_config(slug: str, base_dir: Path | None = None) -> StrategyCon
     - ``MAX_POSITIONS``: int (default 1) — cap on simultaneously open
       positions per symbol (agent-enforced; read by the run loop)
     - ``PARAMS``: dict[str, Any] (strategy-specific knobs, default {})
+    - ``PRECHECKS``: dict[str, Any] (optional; deterministic pre-check
+      selection/tuning, FR-25 — see ``trading.checks.prechecks``)
 
     Raises ``ValueError`` with a descriptive message when the module is
     missing a required declaration or its contents are inconsistent.
@@ -159,6 +164,13 @@ def load_strategy_config(slug: str, base_dir: Path | None = None) -> StrategyCon
                     f"undeclared timeframe(s) {sorted(unknown)}"
                 )
 
+    prechecks_raw = getattr(module, "PRECHECKS", None)
+    if prechecks_raw is not None and not isinstance(prechecks_raw, dict):
+        raise ValueError(
+            f"{module_path}: PRECHECKS must be a dict when declared, "
+            f"got {type(prechecks_raw).__name__}"
+        )
+
     return StrategyConfig(
         slug=slug,
         name=getattr(module, "NAME", slug.replace("-", " ").title()),
@@ -169,6 +181,7 @@ def load_strategy_config(slug: str, base_dir: Path | None = None) -> StrategyCon
         risk_per_trade=float(getattr(module, "RISK_PER_TRADE", 0.01)),
         max_positions=int(getattr(module, "MAX_POSITIONS", 1)),
         params=dict(getattr(module, "PARAMS", {})),
+        prechecks=dict(prechecks_raw) if prechecks_raw is not None else None,
     )
 
 

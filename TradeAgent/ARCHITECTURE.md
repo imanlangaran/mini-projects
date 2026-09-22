@@ -231,6 +231,12 @@ Two layers are deterministic code; the agent is the third:
 3. Risk engine (FR-18)    sizing, max risk, R/R → PASS / REJECT
 ```
 
+The pre-check layer is **configurable per strategy**: a `PRECHECKS`
+dict in `config.py` selects the enabled checks (subset of the
+registry) and tunes thresholds (`min_rr`, `risk_cap_percent`);
+unknown check names fail the run loudly. Implemented in
+`trading/checks/prechecks.py` — see PLAN.md Phase B.
+
 The pre-check layer returns a structured result, e.g.:
 
 ```json

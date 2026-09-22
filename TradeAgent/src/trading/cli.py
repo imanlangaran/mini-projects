@@ -6,10 +6,14 @@ Runs one collection pass for the active strategy:
 2. For every (symbol, timeframe) the config requires: fetch candles,
    drop the unfinished candle, calculate the declared indicators
    (functions imported from the indicator library).
-3. Print the resulting snapshots per timeframe.
+3. Run the deterministic pre-checks over the snapshots (FR-25) —
+   before any agent evaluation (ARCHITECTURE §11). A terminal failure
+   (missing data, unclosed candle, missing indicator values) is
+   terminal for that symbol: NO_DECISION, no agent call.
+4. Print the snapshots and the pre-check report per timeframe.
 
-Scheduling, persistence and the agent evaluation loop are the next
-steps; this is the deterministic collection layer only.
+The agent evaluation loop is the next step (Phase C); this CLI stops at
+the deterministic layers.
 """
 
 from __future__ import annotations
@@ -17,6 +21,11 @@ from __future__ import annotations
 import argparse
 import sys
 
+from trading.checks.prechecks import (
+    Candidate,
+    PreCheckDecision,
+    run_prechecks,
+)
 from trading.market.ccxt_provider import CCXTMarketDataProvider
 from trading.market.exchanges import create_binance
 from trading.market.service import MarketDataService
@@ -65,11 +74,26 @@ def main(argv: list[str] | None = None) -> int:
             candle = snapshot.candle
             print(
                 f"  [{timeframe}] close={candle['close']} "
-                f"({len(snapshot.indicators.values)} indicators)"
+                f"({snapshot.candle_count} candles, "
+                f"{len(snapshot.indicators.values)} indicators)"
             )
             for name, value in snapshot.indicators.values.items():
                 rendered = "n/a" if value is None else str(value)
                 print(f"      {name} = {rendered}")
+
+        # FR-25: deterministic pre-checks BEFORE the agent (no agent yet,
+        # Phase C — the gate is still exercised end to end).
+        report = run_prechecks(config, snapshots, symbol=symbol)
+
+        print(f"  Pre-checks: {report.decision.value}")
+        for result in report.results:
+            mark = "PASS" if result.passed else ("FAIL" if not result.terminal else "TERMINAL-FAIL")
+            print(f"    [{mark}] {result.name}: {result.evidence}")
+
+        if report.decision is PreCheckDecision.PROCEED:
+            print("  → hand over to the agent (Phase C: not wired yet)")
+        else:
+            ok = False
 
     return 0 if ok else 1
 

@@ -185,17 +185,20 @@ class TestConfigDrivenCollection:
         limits = {
             timeframe: limit for _, timeframe, limit, _ in self.provider.calls
         }
-        assert limits == {"4h": 100, "1h": 100}  # MIN_CANDLES from config
+        # MIN_CANDLES + 1: the still-forming candle is dropped (FR-11), so
+        # the store keeps exactly MIN_CANDLES closed candles (FR-8).
+        assert limits == {"4h": 101, "1h": 101}
 
     def test_unfinished_candle_is_dropped(self, tmp_path):
         service = self._service(tmp_path)
         config = load_strategy_config("price-action")
         snapshots = service.get_strategy_snapshots("BTC/USDT", config)
 
-        # Provider returned 100 candles per timeframe; the still-forming
-        # one is dropped, so the snapshot shows the 99th (close=198).
-        assert snapshots["4h"].candle["close"] == Decimal("198")
-        assert snapshots["1h"].candle["close"] == Decimal("198")
+        # Provider returned MIN_CANDLES + 1 candles per timeframe; the
+        # still-forming one is dropped, so the snapshot shows the last
+        # closed candle (close=199).
+        assert snapshots["4h"].candle["close"] == Decimal("199")
+        assert snapshots["1h"].candle["close"] == Decimal("199")
 
     def test_declared_indicators_are_computed_per_timeframe(self, tmp_path):
         service = self._service(tmp_path)

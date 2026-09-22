@@ -489,12 +489,15 @@ The requirements above are the contract. Current implementation covers:
       an irreparable hole fails the run loudly (`ContinuityError`)
 - [ ] FR-15, FR-17 — agent evaluation loop and saved proposals
 - [ ] FR-18 — deterministic risk engine
+- [x] FR-25 — deterministic pre-checks (configurable registry:
+      `trading.checks.prechecks`, wired into the CLI before the agent
+      call; `PRECHECKS` in the strategy config selects/tunes checks)
 - [ ] FR-19..FR-24 — agent-owned analysis persistence (position
       folders, referenced checklist, anchored knowledge, max open
       positions, per-position evaluation, manual open/close)
-- [ ] FR-25..FR-27 — deterministic pre-checks, normative decision
-      vocabulary, agent-run audit records (FR-26 vocabulary and FR-25
-      pre-checks are wired into the CLI once the agent loop lands)
+- [ ] FR-26, FR-27 — normative decision vocabulary + agent-run audit
+      records (the FR-26 vocabulary and the pre-check gate are
+      exercised in the CLI; full wiring lands with the agent loop)
 
 ---
 

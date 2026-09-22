@@ -35,6 +35,8 @@ class MarketSnapshotBuilder:
                 "volume": Decimal(str(row["volume"])),
             },
 
+            candle_count=int(len(dataframe)),
+
             indicators=IndicatorSnapshot(
                 values={
                     name: self._decimal(row[name])

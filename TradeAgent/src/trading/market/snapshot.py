@@ -21,4 +21,8 @@ class MarketSnapshot(BaseModel):
 
     candle: dict
 
+    #: Number of closed candles behind the snapshot (synced history size).
+    #: Lets the pre-check layer verify MIN_CANDLES without touching files.
+    candle_count: int = 0
+
     indicators: IndicatorSnapshot
