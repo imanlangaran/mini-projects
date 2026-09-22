@@ -15,8 +15,8 @@
 | — | Environment setup (venv, pinned deps, 66 tests) | SETUP.md | ✅ done |
 | A | Per-timeframe persistence + continuity validation | FR-9, FR-10, FR-28 | ✅ done |
 | B | Deterministic pre-checks (configurable registry) | FR-25 | ✅ done |
-| C | Agent loop: structured output, audit records, risk engine | FR-15, FR-17, FR-27, FR-18 | ⬜ next |
-| D | Agent-owned analysis workspace | FR-19..FR-24 | ⬜ |
+| C | Agent loop: structured output, audit records, risk engine | FR-15, FR-17, FR-27, FR-18 | ✅ done |
+| D | Agent-owned analysis workspace | FR-19..FR-24 | ⬜ next |
 | E | Replay testing (file-backed provider) | ARCHITECTURE §14 | ⬜ |
 
 Non-goals (never in scope): order execution, DB / web UI / backtesting,
@@ -150,7 +150,7 @@ evaluation ever runs over missing or discontinuous data.
       fail-loud, custom `register_check` extension (tested).
 - [x] Full suite green: 57 core + 37 chartbridge.
 
-## Phase C — Agent evaluation loop, audit, risk engine (FR-15, FR-17, FR-27, FR-18)
+## Phase C — Agent evaluation loop, audit, risk engine (FR-15, FR-17, FR-27, FR-18) — ✅ done
 
 ### Goal
 
@@ -159,25 +159,70 @@ structured proposal in the FR-26 vocabulary; the application validates
 the output (Test 5), records the run (FR-27), and runs the deterministic
 risk engine (FR-18) as the final gate.
 
-### Outline
+### Design (as built)
 
-- `src/trading/agent/schema.py` — pydantic output model for the
-  ARCHITECTURE §9 JSON contract (decision, side, entry/exit, checklist
-  with evidence, risk, invalidations, reasoning); `validate_agent_output()`.
+- `src/trading/agent/schema.py` — the FR-26 output contract as pydantic
+  models (`AgentProposal`, entry/exit levels, checklist items with
+  evidence, risk declaration, invalidations, reasoning; ARCHITECTURE
+  §9 shape). `validate_agent_output()` accepts dict / JSON string /
+  instance and fails loud (`AgentOutputError` with audit-ready detail)
+  on: decision outside the FR-26 vocabulary, ENTRY_CANDIDATE without
+  side/entry/exit, trade levels on a non-candidate decision, non-CCXT
+  symbols, non-positive prices, unknown fields, malformed JSON (Test 5).
+- `src/trading/agent/loop.py` — the evaluation pipeline per symbol:
+  1. `run_prechecks` (FR-25) — terminal failure → `NO_DECISION`
+     (agent never called), non-terminal → `NO_TRADE`;
+  2. agent evaluation (FR-15) + schema validation; malformed response
+     → rejected, recorded as `NO_DECISION` + structured `validation`
+     (Test 5); agent exceptions propagate fail-loud;
+  3. risk engine (FR-18) as the final gate — entry candidates sized
+     and gated; exit candidates validity-only (registry fact via
+     `position_state`, Phase D sources it from `registry.md`; the
+     strategy's exit rules are read from the agent's checklist
+     results); a rejected candidate **keeps its decision** with
+     `risk_result: REJECT` (FR-26 — no separate `RISK_REJECTED`).
+  `run_agent_evaluation()` evaluates all symbols and writes **one**
+  FR-27 record per run; the run's symbol set is the collected
+  snapshots (the CLI `--symbol` override may subset `SYMBOLS`); an
+  empty run fails loud.
 - `src/trading/runs/records.py` — one JSON audit record per run under
-  `data/runs/run-<id>.json` (FR-27).
-- `src/trading/risk/engine.py` — entry candidates: sizing from
-  `EQUITY × RISK_PER_TRADE / |entry − SL|`, max risk per trade, min R/R
-  → `PASS`/`REJECT`; exit candidates: validity checks only (registry
-  OPEN + strategy exit rules allow it), never sized. Rejected candidates
-  keep their decision with `risk_result: REJECT` (FR-26 — no separate
-  `RISK_REJECTED`).
+  `data/runs/run-<id>.json` (FR-27): run id, timestamp, strategy slug +
+  declared version (read from `strategy.md` metadata; missing line →
+  `null`, never invented), symbols, per-timeframe snapshot refs,
+  per-symbol agent output / decision / pre-checks / risk result /
+  validation. Atomic writes; record + referenced data files are enough
+  to reconstruct the run (no database).
+- `src/trading/agent/scripted.py` — deterministic `ScriptedAgent`
+  backend (dict symbol→response, sequential list, JSON string or file)
+  so the CLI can run the full loop today and replay runs (Phase E)
+  without a live agent; scripted responses go through the same FR-26
+  validation path.
+- `src/trading/cli.py` — full loop wired: collection → pre-check gate →
+  agent (`--scripted` for now; no backend → fail loud) → validation →
+  risk engine → FR-27 record → printed decision/risk + the
+  no-execution notice.
+- EQUITY plumbing (FR-18): `StrategyConfig.equity` parsed/validated at
+  load; `price-action` declares `EQUITY = 10_000`.
 
 ### Exit criteria
 
-- [ ] Tests 1/3/4/5: ENTRY_CANDIDATE + PASS; risk too high → REJECT and
-      no final proposal; existing position → HOLD/EXIT_CANDIDATE;
-      malformed AI output → rejected + run recorded.
+- [x] Test 1: healthy entry candidate → `ENTRY_CANDIDATE`, risk PASS,
+      position size `EQUITY×RISK_PER_TRADE/|entry−SL|` (0.2 for the
+      price-action fixture).
+- [x] Test 3: R/R below minimum / zero SL distance → decision stays
+      `ENTRY_CANDIDATE` with `risk_result: REJECT` (no rewrite, no
+      final proposal).
+- [x] Test 4: `HOLD` is not risk-gated; `EXIT_CANDIDATE` is gated on
+      validity only (open position + exit rules), never sized.
+- [x] Test 5: malformed agent output (bad vocabulary, levels on a
+      no-trade, no levels on an entry, invalid JSON) → rejected,
+      recorded as `NO_DECISION` with the validation failure.
+- [x] Test 6 path: missing snapshots / insufficient candles →
+      `NO_DECISION` and the agent is never called; custom non-terminal
+      check failure → `NO_TRADE` (agent not called).
+- [x] One audit record per run, all symbols nested; CLI end-to-end
+      smoke test without network (fake provider + scripted agent).
+- [x] Full suite green: 152 core + 37 chartbridge.
 
 ## Phase D — Agent-owned analysis workspace (FR-19..FR-24)
 

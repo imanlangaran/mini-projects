@@ -487,7 +487,12 @@ The requirements above are the contract. Current implementation covers:
 - [x] FR-28 — continuity validation on every sync: strictly ascending,
       period-consistent timestamps; gaps back-filled from the provider,
       an irreparable hole fails the run loudly (`ContinuityError`)
-- [ ] FR-15, FR-17 — agent evaluation loop and saved proposals
+- [x] FR-15, FR-17 — agent evaluation loop + saved proposals
+      (`trading.agent.loop`: pre-check gate → agent → FR-26 schema
+      validation (`trading.agent.schema`, malformed responses rejected
+      and recorded, Test 5) → FR-18 risk gate; scripted backend
+      (`trading.agent.scripted`) stands in for the live agent until
+      the Phase D tool surface)
 - [x] FR-18 — deterministic risk engine (`trading.risk.engine`: entry
       candidates sized from `EQUITY × RISK_PER_TRADE / |entry − SL|`,
       max-risk + min-R/R gates; exit candidates validity-only, never
@@ -500,9 +505,12 @@ The requirements above are the contract. Current implementation covers:
 - [ ] FR-19..FR-24 — agent-owned analysis persistence (position
       folders, referenced checklist, anchored knowledge, max open
       positions, per-position evaluation, manual open/close)
-- [ ] FR-26, FR-27 — normative decision vocabulary + agent-run audit
-      records (the FR-26 vocabulary and the pre-check gate are
-      exercised in the CLI; full wiring lands with the agent loop)
+- [x] FR-26, FR-27 — normative decision vocabulary enforced in the
+      output schema (`trading.agent.schema`) and one audit record per
+      run under `data/runs/` (`trading.runs.records`, per-symbol
+      results nested in a single record; run id, timestamp, strategy
+      slug + declared version, snapshot refs, agent output, decision,
+      risk result)
 
 ---
 

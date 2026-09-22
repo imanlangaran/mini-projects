@@ -512,9 +512,13 @@ python -m trading.cli --strategy price-action
 python -m trading.cli --strategy price-action --symbol ETH/USDT   # override SYMBOLS
 ```
 
-Today the CLI runs the deterministic collection pass (load config →
-sync → calculate → print snapshots). The target output of a full run,
-once the agent loop is wired (FR-15..FR-18):
+Since Phase C the CLI runs the full loop: collection → pre-check gate
+→ agent evaluation (currently `--scripted`, deterministic responses —
+the live Hermes backend arrives with the Phase D tool surface) → FR-26
+validation → risk engine → one FR-27 audit record under `data/runs/`.
+A run without `--scripted` fails loud: no agent backend is wired yet.
+
+The target output of a full run (ARCHITECTURE §13):
 
 ```text
 Strategy   : Support & Resistance Price Action (price-action)
@@ -626,12 +630,12 @@ Already in place (README §7):
 Remaining, in order:
 
 ```text
- 1. Deterministic pre-checks                (FR-25)
+ 1. Deterministic pre-checks                (FR-25) ✓
  2. Agent integration: structured output
-    + validator                             (FR-15, FR-17)
- 3. Agent-run audit records                 (FR-27)
- 4. Risk engine                             (FR-18)
- 5. Agent-owned analysis workspace          (FR-19..FR-24)
+    + validator                             (FR-15, FR-17) ✓
+ 3. Agent-run audit records                 (FR-27) ✓
+ 4. Risk engine                             (FR-18) ✓
+ 5. Agent-owned analysis workspace          (FR-19..FR-24) — next
  6. Historical/replay testing (file-backed provider)
 ```
 

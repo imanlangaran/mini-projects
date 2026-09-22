@@ -247,12 +247,19 @@ def _validate_dict(data: object, raw: object) -> AgentProposal:
         return AgentProposal.model_validate(data)
     except ValidationError as exc:
         # Re-raise as AgentOutputError with a compact, actionable message.
+        # Sanitize pydantic's error dicts: they can embed non-JSON-safe
+        # objects (e.g. the original exception under ``ctx.error``),
+        # which must never leak into the FR-27 audit record.
         first = exc.errors()[0]
         loc = ".".join(str(part) for part in first.get("loc", ()))
+        errors = [
+            {"loc": list(err.get("loc", ())), "msg": err.get("msg"), "type": err.get("type")}
+            for err in exc.errors()[:10]
+        ]
         raise AgentOutputError(
             f"agent output failed schema validation at {loc!r}: "
             f"{first.get('msg')}",
-            detail={"raw": str(raw)[:2000], "errors": exc.errors()[:10]},
+            detail={"raw": str(raw)[:2000], "errors": errors},
         ) from exc
 
 
