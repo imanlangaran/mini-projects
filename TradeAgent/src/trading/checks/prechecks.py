@@ -263,22 +263,25 @@ def _check_current_price(ctx: PreCheckContext) -> tuple[bool, str]:
 def _candidate_reward_risk(candidate: Candidate) -> tuple[Decimal, Decimal]:
     """Return (reward, risk) per unit for the candidate's side.
 
-    Raises ``ValueError`` when the levels are not ordered consistently
-    with the side (LONG: SL < entry < TP; SHORT: TP < entry < SL).
+    Raises ``ValueError`` when the levels are inverted relative to the
+    side (LONG: SL <= entry <= TP; SHORT: TP <= entry <= SL). Degenerate
+    zero distances (SL == entry, TP == entry) pass the ordering gate and
+    are reported by the sizing / R:R checks with precise evidence —
+    fail loud, never a silent pass or a divide-by-zero.
     """
     if candidate.side == "LONG":
-        if not candidate.stop_loss < candidate.entry < candidate.take_profit:
+        if not candidate.stop_loss <= candidate.entry <= candidate.take_profit:
             raise ValueError(
-                "LONG levels must satisfy SL < entry < TP "
+                "LONG levels must satisfy SL <= entry <= TP "
                 f"(SL={candidate.stop_loss}, entry={candidate.entry}, "
                 f"TP={candidate.take_profit})"
             )
         reward = candidate.take_profit - candidate.entry
         risk = candidate.entry - candidate.stop_loss
     elif candidate.side == "SHORT":
-        if not candidate.take_profit < candidate.entry < candidate.stop_loss:
+        if not candidate.take_profit <= candidate.entry <= candidate.stop_loss:
             raise ValueError(
-                "SHORT levels must satisfy TP < entry < SL "
+                "SHORT levels must satisfy TP <= entry <= SL "
                 f"(SL={candidate.stop_loss}, entry={candidate.entry}, "
                 f"TP={candidate.take_profit})"
             )

@@ -129,7 +129,7 @@ class RunRecord:
                 for symbol, timeframes in self.input_snapshot_refs.items()
             },
             "agent_output": {
-                symbol: dict(output)
+                symbol: (dict(output) if output is not None else None)
                 for symbol, output in self.agent_output.items()
             },
             "decision": dict(self.decision),
@@ -162,7 +162,7 @@ class RunRecord:
                 for symbol, timeframes in data.get("input_snapshot_refs", {}).items()
             },
             agent_output={
-                symbol: dict(output)
+                symbol: (dict(output) if output is not None else None)
                 for symbol, output in data.get("agent_output", {}).items()
             },
             decision=dict(data.get("decision", {})),
