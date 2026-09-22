@@ -517,6 +517,12 @@ The requirements above are the contract. Current implementation covers:
       results nested in a single record; run id, timestamp, strategy
       slug + declared version, snapshot refs, agent output, decision,
       risk result)
+- [x] ARCHITECTURE §14 — replay testing: `FileMarketDataProvider`
+      (`trading.market.file_provider`) serves stored
+      `data/market/` snapshots deterministically (same stored input +
+      same strategy → same result, no network); the §14 Test 1–7
+      scenarios run as integration tests against fixtures
+      (`tests/test_replay_phase_e.py`)
 
 ---
 

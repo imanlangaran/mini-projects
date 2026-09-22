@@ -669,7 +669,7 @@ Remaining, in order:
  3. Agent-run audit records                 (FR-27) ✓
  4. Risk engine                             (FR-18) ✓
  5. Agent-owned analysis workspace          (FR-19..FR-24) ✓
- 6. Historical/replay testing (file-backed provider) — next
+ 6. Historical/replay testing (file-backed provider) ✓
 ```
 
 **Do not add order execution at any step.**

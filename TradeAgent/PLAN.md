@@ -17,7 +17,7 @@
 | B | Deterministic pre-checks (configurable registry) | FR-25 | ✅ done |
 | C | Agent loop: structured output, audit records, risk engine | FR-15, FR-17, FR-27, FR-18 | ✅ done |
 | D | Agent-owned analysis workspace | FR-19..FR-24 | ✅ done |
-| E | Replay testing (file-backed provider) | ARCHITECTURE §14 | ⬜ |
+| E | Replay testing (file-backed provider) | ARCHITECTURE §14 | ✅ done |
 
 Non-goals (never in scope): order execution, DB / web UI / backtesting,
 multiple simultaneous providers, MT5 on Windows (Linux host).
@@ -277,7 +277,7 @@ knowledge.
   (13, incl. the Test 4 flow) + a CLI end-to-end scaffold test.
   Full suite: 211 core + 37 chartbridge green.
 
-## Phase E — Historical / replay testing (file-backed provider)
+## Phase E — Historical / replay testing (file-backed provider) — ✅ done
 
 ### Goal
 
@@ -285,12 +285,36 @@ Same stored input + same strategy → same result (ARCHITECTURE §14):
 replay the fixtures of Tests 1–7 against a stored-candles provider
 without network.
 
-### Outline
+### Design (as built)
 
-- `src/trading/market/file_provider.py` — provider over a stored
-  `data/market/` snapshot (or fixture dir).
-- Test scenarios Test 1–7 documented in ARCHITECTURE §14 executed as
-  integration tests against fixtures.
+- `src/trading/market/file_provider.py` — `FileMarketDataProvider`, a
+  read-only `MarketDataProvider` over stored `CandleStore` Parquet
+  files (`data/market/<SYMBOL-FOLDER>/<timeframe>.parquet`, or any
+  fixture dir with that layout). `get_candles` honors `since`
+  (inclusive) + `limit` like the provider contract; `get_current_price`
+  is derived deterministically from the stored data (latest close
+  across the symbol's timeframes). A hole in a fixture cannot be
+  repaired from the provider itself — the Test 7 fail-loud path.
+
+### Exit criteria
+
+- [x] Tests 1–7 of ARCHITECTURE §14 executed as integration tests
+      against deterministic fixtures, through the full collection →
+      pre-check → agent (scripted) → validation → risk → FR-27 path.
+- [x] Test 1: ENTRY_CANDIDATE + risk PASS (size 0.2) from the stored
+      snapshot; replaying the same fixture twice yields identical
+      decision/risk (determinism).
+- [x] Test 3: R/R below minimum → decision stays ENTRY_CANDIDATE,
+      risk_result REJECT.
+- [x] Test 4: OPEN registry row → EXIT_CANDIDATE, validity-only (never
+      sized), evaluated in its own position folder.
+- [x] Test 5: malformed scripted response → rejected and recorded as
+      NO_DECISION with the validation failure.
+- [x] Test 6: insufficient stored candles → NO_DECISION, agent never
+      called; a missing timeframe fails loudly at collection.
+- [x] Test 7: crafted hole in the fixture → ContinuityError (fail
+      loud, no analysis over the hole).
+- [x] Full suite green: 230 core + 37 chartbridge.
 
 ---
 
