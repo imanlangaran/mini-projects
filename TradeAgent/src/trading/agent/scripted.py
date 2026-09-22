@@ -60,6 +60,8 @@ class ScriptedAgent:
         snapshots,
         pre_checks: dict,
         now,
+        analysis=None,
+        tools=None,
     ) -> object:
         if isinstance(self.responses, dict):
             if symbol not in self.responses:

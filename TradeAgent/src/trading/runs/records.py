@@ -15,6 +15,9 @@ one file per run (ARCHITECTURE §12)::
     risk_result        per symbol — PASS / REJECT / null
     pre_checks         per symbol — FR-25 gate output
     validation         per symbol, only where the output was rejected
+    analysis_workspace per symbol — where the agent's own persistence
+                       for this run lives (README §3.7, FR-19: the core
+                       records the folders, never the content)
 
 A run may cover several symbols (``SYMBOLS``), so the per-symbol
 results are keyed by symbol inside the one record. The record plus the
@@ -44,7 +47,7 @@ import json
 import os
 import re
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field as dataclasses_field
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -112,6 +115,11 @@ class RunRecord:
     #: Per symbol: structured validation failure, present only where the
     #: agent output was rejected.
     validation: dict[str, dict]
+    #: Per symbol: where the agent's own persistence for this run lives
+    #: (README §3.7, FR-19) — the workspace root plus the OPEN position
+    #: folders it must evaluate one by one (FR-23). The core records the
+    #: folders, never the knowledge content inside them.
+    analysis_workspace: dict[str, dict] = dataclasses_field(default_factory=dict)
 
     def to_dict(self) -> dict:
         """JSON-safe form — the exact content of the record file."""
@@ -143,6 +151,10 @@ class RunRecord:
             "validation": {
                 symbol: dict(detail)
                 for symbol, detail in self.validation.items()
+            },
+            "analysis_workspace": {
+                symbol: dict(workspace)
+                for symbol, workspace in self.analysis_workspace.items()
             },
         }
 
@@ -177,6 +189,10 @@ class RunRecord:
             validation={
                 symbol: dict(detail)
                 for symbol, detail in data.get("validation", {}).items()
+            },
+            analysis_workspace={
+                symbol: dict(workspace)
+                for symbol, workspace in data.get("analysis_workspace", {}).items()
             },
         )
 

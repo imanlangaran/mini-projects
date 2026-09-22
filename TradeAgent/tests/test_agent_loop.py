@@ -102,8 +102,14 @@ class FakeAgent:
     responses: list = field(default_factory=list)
     calls: list = field(default_factory=list)
 
-    def evaluate(self, *, config, symbol, snapshots, pre_checks, now):
-        self.calls.append({"symbol": symbol, "pre_checks": pre_checks})
+    def evaluate(self, *, config, symbol, snapshots, pre_checks, now,
+                 analysis=None, tools=None):
+        self.calls.append({
+            "symbol": symbol,
+            "pre_checks": pre_checks,
+            "analysis": analysis,
+            "tools": tools,
+        })
         response = (
             self.responses.pop(0) if self.responses else dict(ENTRY_RESPONSE)
         )

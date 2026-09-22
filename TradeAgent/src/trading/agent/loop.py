@@ -55,6 +55,8 @@ from trading.agent.schema import (
     AgentProposal,
     validate_agent_output,
 )
+from trading.analysis.registry import symbol_has_open_position
+from trading.analysis.tools import AnalysisTools
 from trading.checks.prechecks import PreCheckDecision, PreCheckReport, run_prechecks
 from trading.market.snapshot import MarketSnapshot
 from trading.risk.engine import RiskEvaluation, evaluate_risk
@@ -64,6 +66,33 @@ from trading.strategy.config import StrategyConfig
 
 #: Raw-response snippet cap for rejected agent output (audit record).
 _RAW_SNIPPET_LIMIT = 2000
+
+
+@dataclass(frozen=True)
+class AnalysisContext:
+    """The agent-owned workspace as seen by the agent (FR-19, FR-23).
+
+    The agent reads and writes its analysis directly in the workspace;
+    the context points it at the right folders — it carries **where**,
+    never **what**: the core does not interpret the knowledge content.
+    """
+
+    #: Root of this symbol's analysis workspace (``data/analysis/<symbol>``).
+    workspace_root: str
+    #: OPEN position ids, registry order — evaluated one by one (FR-23).
+    open_positions: tuple[str, ...]
+    #: True when ``max_positions`` OPEN positions already exist (FR-22).
+    max_open_reached: bool
+    #: ``{position_id: folder}`` — where each position's analysis lives.
+    position_folders: dict[str, str]
+
+    def to_dict(self) -> dict:
+        return {
+            "workspace_root": self.workspace_root,
+            "open_positions": list(self.open_positions),
+            "max_open_reached": self.max_open_reached,
+            "position_folders": dict(self.position_folders),
+        }
 
 
 class AgentEvaluator(Protocol):
@@ -81,6 +110,8 @@ class AgentEvaluator(Protocol):
         snapshots: Mapping[str, MarketSnapshot],
         pre_checks: dict,
         now: datetime,
+        analysis: "AnalysisContext | None" = None,
+        tools: "AnalysisTools | None" = None,
     ) -> object: ...
 
 
@@ -122,8 +153,17 @@ def evaluate_symbol(
     *,
     now: datetime | None = None,
     position_is_open: bool = False,
+    analysis: AnalysisContext | None = None,
+    tools: AnalysisTools | None = None,
 ) -> SymbolEvaluation:
-    """Run the full FR-25 → FR-15 → FR-18 pipeline for one symbol."""
+    """Run the full FR-25 → FR-15 → FR-18 pipeline for one symbol.
+
+    ``analysis``/``tools`` carry the Phase D workspace context: the
+    folders the agent reads and writes (FR-19) and the deterministic
+    helpers it uses (registry lifecycle, per-position analysis files,
+    referenced checklist). Both default to ``None`` for lightweight
+    unit setups; ``run_agent_evaluation`` always supplies them.
+    """
     moment = now or datetime.now(timezone.utc)
 
     # -- 1. deterministic pre-checks BEFORE the agent (FR-25) --------------
@@ -144,6 +184,8 @@ def evaluate_symbol(
         snapshots=snapshots,
         pre_checks=report.to_dict(),
         now=moment,
+        analysis=analysis,
+        tools=tools,
     )
     try:
         proposal = validate_agent_output(raw)
@@ -200,6 +242,8 @@ def run_agent_evaluation(
     store_dir: Path | None = None,
     record_store: RunRecordStore | None = None,
     position_state: Mapping[str, bool] | None = None,
+    analysis_base_dir: Path | None = None,
+    analysis_tools: Mapping[str, AnalysisTools] | None = None,
 ) -> RunRecord:
     """Evaluate the collected symbols and write ONE audit record (FR-27).
 
@@ -215,9 +259,17 @@ def run_agent_evaluation(
         store_dir: market-store base dir for the record's
             ``input_snapshot_refs``; default the configured data dir.
         record_store: where the record is written; default the data dir.
-        position_state: ``{symbol: True}`` for symbols with an OPEN
-            position in the registry (exit-candidate validity fact;
-            Phase D sources this from ``registry.md``).
+        position_state: optional ``{symbol: True}`` override for symbols
+            with an OPEN position (exit-candidate validity fact). When
+            omitted, the fact is sourced from the symbol's
+            ``registry.md`` (Phase D — the registry is the source of
+            truth, FR-24).
+        analysis_base_dir: base dir of the analysis workspaces
+            (``<base>/analysis/<symbol>``); default the configured data
+            dir. Scaffolding is idempotent (FR-19).
+        analysis_tools: optional pre-built ``{symbol: AnalysisTools}``
+            (tests inject isolated workspaces); default one per symbol
+            over ``analysis_base_dir``.
 
     Raises:
         ValueError: when no snapshots were collected — an empty run
@@ -234,7 +286,31 @@ def run_agent_evaluation(
             "no snapshots collected for this run — refusing to write an "
             "empty audit record (fail loud; check SYMBOLS / --symbol)"
         )
-    positions = position_state or {}
+    overrides = dict(position_state or {})
+
+    # -- Phase D workspace: scaffold + per-symbol context (FR-19, FR-23) ----
+    contexts: dict[str, AnalysisContext] = {}
+    tools_by_symbol: dict[str, AnalysisTools] = dict(analysis_tools or {})
+    open_state: dict[str, bool] = {}
+    for symbol in symbols:
+        tools = tools_by_symbol.get(symbol) or AnalysisTools(
+            symbol, base_dir=analysis_base_dir
+        )
+        tools_by_symbol[symbol] = tools
+        contexts[symbol] = AnalysisContext(
+            workspace_root=str(tools.workspace_root),
+            open_positions=tuple(tools.open_position_ids()),
+            max_open_reached=tools.max_open_reached(config.max_positions),
+            position_folders={
+                position_id: str(tools.paths.position_folder(position_id))
+                for position_id in tools.open_position_ids()
+            },
+        )
+        # The registry is the source of truth for OPEN positions (FR-24);
+        # an explicit ``position_state`` entry overrides it (tests / CLI).
+        open_state[symbol] = overrides.get(
+            symbol, symbol_has_open_position(symbol, paths=tools.paths)
+        )
 
     evaluations = [
         evaluate_symbol(
@@ -243,7 +319,9 @@ def run_agent_evaluation(
             snapshots_by_symbol.get(symbol, {}),
             agent,
             now=moment,
-            position_is_open=positions.get(symbol, False),
+            position_is_open=open_state.get(symbol, False),
+            analysis=contexts[symbol],
+            tools=tools_by_symbol[symbol],
         )
         for symbol in symbols
     ]
@@ -270,6 +348,9 @@ def run_agent_evaluation(
         risk_result={e.symbol: e.risk_result_record() for e in evaluations},
         validation={
             e.symbol: e.validation for e in evaluations if e.validation is not None
+        },
+        analysis_workspace={
+            e.symbol: contexts[e.symbol].to_dict() for e in evaluations
         },
     )
 
