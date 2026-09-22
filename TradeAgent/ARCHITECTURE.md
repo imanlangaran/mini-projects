@@ -160,6 +160,12 @@ get_candles()
 - A **file-backed provider** (stored candles/JSON) is the tool for
   replay testing (§14): same stored input + same strategy → same
   result.
+- An **MT5 provider** (`trading.market.mt5_provider`) wraps the
+  MetaTrader 5 terminal (Windows + running terminal + the
+  `MetaTrader5` package) behind the same interface: `since` maps to
+  `copy_rates_range` for incremental sync (FR-9), the forming candle is
+  left for the collector's FR-11 drop, symbols map CCXT-style → MT5
+  style, and the package is injectable so Linux tests run hermetic.
 
 Deliberately **not** in the interface for the MVP:
 

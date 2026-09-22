@@ -484,7 +484,11 @@ The requirements above are the contract. Current implementation covers:
       out prominently in `strategies/TEMPLATE.md` (the pipeline runs
       the code, not the markdown)
 - [x] FR-7, FR-8, FR-11 — provider abstraction, config-driven fetching
-      per declared timeframe, unfinished-candle exclusion
+      per declared timeframe, unfinished-candle exclusion (three
+      backends implement `MarketDataProvider`: CCXT live,
+      `FileMarketDataProvider` for replay (§14), and
+      `MT5MarketDataProvider` — Windows + running MetaTrader terminal,
+      injected module keeps the Linux test suite hermetic)
 - [x] FR-12, FR-13 — config-driven deterministic indicator calculation
       (`IndicatorCalculator`, `trading/indicators/library.py`)
 - [x] FR-14 — market snapshot with pre-computed indicator values
