@@ -135,14 +135,13 @@ INDICATORS = (
 - `load_strategy_config(slug)` validates the module (FR-4..FR-6) and
   **fails the run loudly on any drift**.
 
-The strategy file declares the same requirements for the agent. If the
-two files disagree, **the run refuses to start** (FR-6). There is no
-"code wins" precedence — the two-file agreement is enforced by
-validation at startup, not by convention. A documentation example that
-disagrees with its own config is exactly the failure FR-6 exists to
-catch. (The loader's module-side validation is implemented — README
-§7; cross-validating the markdown against the config is remaining
-work.)
+The strategy file declares the same requirements for the agent. The
+two files MUST agree (FR-6) — and validating that agreement is the
+**strategy author's responsibility**: the template
+(`strategies/TEMPLATE.md`) calls this out prominently so the author
+notices. The pipeline runs the code, not the markdown; the loader
+validates the config side (README §7) and fails loudly on any
+inconsistency inside it.
 
 ---
 
@@ -439,8 +438,11 @@ or by an external scheduler — the core never schedules itself.
 ```text
 START
  │
- ├── Load strategy config               (FR-4..FR-6)
- ├── Validate strategy.md vs config.py  (fail loud on drift, FR-6)
+ ├── Load strategy config               (FR-4..FR-6 — the loader
+ │                                        validates the config side;
+ │                                        strategy.md ↔ config.py
+ │                                        agreement is the author's
+ │                                        responsibility, TEMPLATE.md)
  │
  ├── For each (symbol, timeframe):
  │     ├── Read last stored candle

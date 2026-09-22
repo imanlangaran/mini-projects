@@ -13,8 +13,10 @@ MUST agree with each other:
 
 The core system reads ONLY ``config.py``. The markdown is for the agent
 and for humans; the code is what drives the pipeline (collector ->
-calculator -> snapshot). If the two drift apart, the code wins — so keep
-them in sync.
+calculator -> snapshot). The two MUST stay in sync — validating that
+agreement is the **strategy author's responsibility** (FR-6, called out
+prominently in ``strategies/TEMPLATE.md``): the pipeline runs the code,
+so a drift silently changes what the pipeline does.
 """
 
 from __future__ import annotations

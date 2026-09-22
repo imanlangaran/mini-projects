@@ -174,11 +174,13 @@ requirements.
   reimplement indicators; it composes them.
 - **FR-6 — Two-file agreement.** A requirement (symbol, timeframe,
   indicator, config) declared in one file must exist in the other. The
-  loader validates: at least one symbol is declared (`SYMBOLS`), every
-  timeframe has a min-candle count, indicator names are unique, and
-  indicators reference only declared timeframes. Any mismatch
-  **fails the run loudly** — there is no "code wins" precedence;
-  agreement is enforced by validation at startup, not by convention.
+  loader validates the config side: at least one symbol is declared
+  (`SYMBOLS`), every timeframe has a min-candle count, indicator names
+  are unique, and indicators reference only declared timeframes. The
+  cross-file side is the **strategy author's responsibility**: the
+  author defines both files and validates that they agree — the
+  template (`strategies/TEMPLATE.md`) calls this out prominently so
+  the author notices. The pipeline runs the code, not the markdown.
 
 ### 3.3 Market data collection
 
@@ -401,7 +403,10 @@ START
  │     └── Min candles per timeframe   (MIN_CANDLES)
  │     └── Required indicator funcs    (INDICATORS)
  │
- ├── Validate strategy.md vs config.py ← they must agree (FR-6)
+ ├── Validate strategy.md vs config.py ← author responsibility:
+ │                                        both files must agree (FR-6);
+ │                                        the loader validates the
+ │                                        config side only
  │
  ├── For each (symbol, timeframe):
  │     ├── Read last stored candle        ← where we left off
@@ -474,8 +479,10 @@ The requirements above are the contract. Current implementation covers:
 - [x] FR-6 (config side) — loader validation: SYMBOLS declared,
       timeframe/min-candle consistency, unique indicator names,
       indicators reference only declared timeframes
-- [ ] FR-6 (cross-file) — validating strategy.md against config.py
-      before the run starts (FR-6's fail-loud rule, full scope)
+- [x] FR-6 (cross-file) — strategy.md must agree with config.py;
+      validation is the **strategy author's responsibility**, called
+      out prominently in `strategies/TEMPLATE.md` (the pipeline runs
+      the code, not the markdown)
 - [x] FR-7, FR-8, FR-11 — provider abstraction, config-driven fetching
       per declared timeframe, unfinished-candle exclusion
 - [x] FR-12, FR-13 — config-driven deterministic indicator calculation

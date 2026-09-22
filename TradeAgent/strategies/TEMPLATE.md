@@ -13,8 +13,16 @@
 - Config: <slug> — the pythonic definitions (timeframes, minimum
   candles, indicator functions and parameters) live in
   `strategies/<slug>/config.py`. This file declares the same
-  requirements for humans and the agent. The two MUST stay in sync; the
-  pipeline runs the code, not the markdown.
+  requirements for humans and the agent. The pipeline runs the code,
+  not the markdown.
+
+> **Author responsibility (FR-6):** *you* define this strategy, so *you*
+> validate it. `strategy.md` and `config.py` MUST declare the same
+> requirements — timeframes, minimum candles, indicators and
+> parameters. There is no automatic cross-check at startup: a drift
+> between the two files is a strategy bug, and it is yours to catch
+> before the strategy is used. Whenever you change one file, re-read
+> the other and keep them in sync.
 
 ---
 

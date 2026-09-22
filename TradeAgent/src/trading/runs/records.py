@@ -36,9 +36,10 @@ only):
 
 The declared strategy version is read from ``strategy.md`` metadata
 (FR-27 names it as the source). The file itself is agent/human
-documentation — the core still reads only ``config.py``; strict
-two-file agreement is FR-6 (later phase), so a missing ``Version:``
-line records ``version: null`` rather than guessing.
+documentation — the core still reads only ``config.py``; the two-file
+agreement is the strategy author's responsibility (FR-6 — see
+``strategies/TEMPLATE.md``), so a missing ``Version:`` line records
+``version: null`` rather than guessing.
 """
 
 from __future__ import annotations
