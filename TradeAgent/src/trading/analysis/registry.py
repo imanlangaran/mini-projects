@@ -410,14 +410,17 @@ def _replace_row(
 
 
 def read_registry(
-    symbol: str, base_dir: Path | None = None
+    symbol: str,
+    base_dir: Path | None = None,
+    *,
+    paths: WorkspacePaths | None = None,
 ) -> tuple[WorkspacePaths, list[RegistryRow]]:
     """Read the registry rows without modifying anything.
 
     A missing ``registry.md`` reads as empty (no positions ever) — the
     read side never forces scaffolding; writing does.
     """
-    paths = scaffold_workspace(symbol, base_dir)
+    paths = paths or scaffold_workspace(symbol, base_dir)
     if not paths.registry.is_file():
         return paths, []
     columns, rows = _parse_table(paths.registry.read_text(encoding="utf-8"), paths.registry)
@@ -425,16 +428,25 @@ def read_registry(
 
 
 def open_positions(
-    symbol: str, base_dir: Path | None = None
+    symbol: str,
+    base_dir: Path | None = None,
+    *,
+    paths: WorkspacePaths | None = None,
 ) -> list[RegistryRow]:
     """All OPEN rows for ``symbol``, in registry order."""
-    _, rows = read_registry(symbol, base_dir)
+    _, rows = read_registry(symbol, base_dir, paths=paths)
     return [row for row in rows if row.status == STATUS_OPEN]
 
 
-def position_is_open(symbol: str, position_id: str, base_dir: Path | None = None) -> bool:
+def position_is_open(
+    symbol: str,
+    position_id: str,
+    base_dir: Path | None = None,
+    *,
+    paths: WorkspacePaths | None = None,
+) -> bool:
     """Is this specific row OPEN? (exit-validity fact for FR-18)."""
-    _, rows = read_registry(symbol, base_dir)
+    _, rows = read_registry(symbol, base_dir, paths=paths)
     try:
         row = _find_row(rows, position_id, Path(position_id))
     except RegistryError:
@@ -442,18 +454,29 @@ def position_is_open(symbol: str, position_id: str, base_dir: Path | None = None
     return row.status == STATUS_OPEN
 
 
-def symbol_has_open_position(symbol: str, base_dir: Path | None = None) -> bool:
+def symbol_has_open_position(
+    symbol: str,
+    base_dir: Path | None = None,
+    *,
+    paths: WorkspacePaths | None = None,
+) -> bool:
     """Does any OPEN row exist for ``symbol``? (Phase C's position_state)."""
-    return bool(open_positions(symbol, base_dir))
+    return bool(open_positions(symbol, base_dir, paths=paths))
 
 
 def max_open_reached(
-    symbol: str, max_positions: int, base_dir: Path | None = None
+    symbol: str,
+    max_positions: int,
+    base_dir: Path | None = None,
+    *,
+    paths: WorkspacePaths | None = None,
 ) -> bool:
     """True when ``max_positions`` OPEN rows already exist (FR-22)."""
     if max_positions < 0:
         raise RegistryError(f"MAX_POSITIONS must not be negative, got {max_positions}")
-    return _open_count(open_positions(symbol, base_dir)) >= max_positions
+    return (
+        _open_count(open_positions(symbol, base_dir, paths=paths)) >= max_positions
+    )
 
 
 # ---------------------------------------------------------------------------
