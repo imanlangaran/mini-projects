@@ -23,6 +23,11 @@ Runs one full cycle for the active strategy (ARCHITECTURE §11):
 The reasoning layer is ``--scripted`` for now (deterministic responses
 for tests/replay); a live Hermes backend replaces it without touching
 this pipeline (``AgentEvaluator`` protocol).
+
+The market data backend is selectable with ``--provider``: ``ccxt``
+(Binance, default) or ``mt5`` (MetaTrader 5 terminal — Windows +
+running terminal + the ``MetaTrader5`` package); ``--mt5-symbol-map``
+maps CCXT-style strategy symbols to MT5-style symbols.
 """
 
 from __future__ import annotations
@@ -37,6 +42,7 @@ from trading.agent.scripted import ScriptedAgent
 from trading.checks.prechecks import PreCheckDecision
 from trading.market.ccxt_provider import CCXTMarketDataProvider
 from trading.market.exchanges import create_binance
+from trading.market.mt5_provider import MT5MarketDataProvider
 from trading.market.service import MarketDataService
 from trading.strategy.config import load_strategy_config
 
@@ -63,6 +69,26 @@ def main(argv: list[str] | None = None) -> int:
             "agent backend yet (Phase D)"
         ),
     )
+    parser.add_argument(
+        "--provider",
+        default="ccxt",
+        choices=("ccxt", "mt5"),
+        help=(
+            "market data backend: 'ccxt' (Binance, default) or 'mt5' "
+            "(MetaTrader 5 terminal — Windows + running terminal + the "
+            "MetaTrader5 package)"
+        ),
+    )
+    parser.add_argument(
+        "--mt5-symbol-map",
+        default=None,
+        metavar="CCXT=MT5[,CCXT=MT5…]",
+        help=(
+            "comma-separated symbol pairs for the mt5 provider, e.g. "
+            "'BTC/USDT=BTCUSD,ETH/USDT=ETHUSD'; unmapped symbols pass "
+            "through unchanged"
+        ),
+    )
     args = parser.parse_args(argv)
 
     if not args.scripted:
@@ -82,31 +108,74 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Indicators : {', '.join(config.indicator_names()) or '(none)'}")
     print()
 
-    exchange = create_binance()
-    provider = CCXTMarketDataProvider(exchange)
-    service = MarketDataService(provider)
+    provider = _build_provider(args)
+    try:
+        service = MarketDataService(provider)
 
-    snapshots_by_symbol: dict[str, dict] = {}
-    for symbol in symbols:
-        try:
-            snapshots_by_symbol[symbol] = service.get_strategy_snapshots(symbol, config)
-        except Exception as exc:  # network / exchange errors
-            print(f"  ERROR: {exc}", file=sys.stderr)
+        snapshots_by_symbol: dict[str, dict] = {}
+        for symbol in symbols:
+            try:
+                snapshots_by_symbol[symbol] = service.get_strategy_snapshots(symbol, config)
+            except Exception as exc:  # network / exchange errors
+                print(f"  ERROR: {exc}", file=sys.stderr)
 
-    if not snapshots_by_symbol:
-        print(
-            "ERROR: no snapshots collected — refusing to run the agent "
-            "evaluation over nothing",
-            file=sys.stderr,
+        if not snapshots_by_symbol:
+            print(
+                "ERROR: no snapshots collected — refusing to run the agent "
+                "evaluation over nothing",
+                file=sys.stderr,
+            )
+            return 1
+
+        agent = ScriptedAgent(_scripted_responses(args.scripted))
+
+        record = run_agent_evaluation(config, snapshots_by_symbol, agent)
+
+        _print_record(record, config, symbols)
+        return 0
+    finally:
+        # Release the MT5 terminal connection (no-op for other backends).
+        shutdown = getattr(provider, "shutdown", None)
+        if shutdown:
+            shutdown()
+
+
+def _build_provider(args):
+    """Construct the market data backend selected by ``--provider``."""
+    if args.provider == "mt5":
+        return MT5MarketDataProvider(
+            symbol_map=_mt5_symbol_map(args.mt5_symbol_map)
         )
-        return 1
+    exchange = create_binance()
+    return CCXTMarketDataProvider(exchange)
 
-    agent = ScriptedAgent(_scripted_responses(args.scripted))
 
-    record = run_agent_evaluation(config, snapshots_by_symbol, agent)
+def _mt5_symbol_map(raw: str | None) -> dict[str, str]:
+    """Parse ``CCXT=MT5,CCXT=MT5…`` into the provider's symbol map."""
+    if not raw:
+        return {}
 
-    _print_record(record, config, symbols)
-    return 0
+    mapping: dict[str, str] = {}
+    for pair in raw.split(","):
+        pair = pair.strip()
+        if not pair:
+            continue
+        if "=" not in pair:
+            print(
+                f"ERROR: --mt5-symbol-map expects CCXT=MT5 pairs, "
+                f"got {pair!r}",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        ccxt_symbol, mt5_symbol = (part.strip() for part in pair.split("=", 1))
+        if not ccxt_symbol or not mt5_symbol:
+            print(
+                f"ERROR: --mt5-symbol-map pair {pair!r} has an empty side",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        mapping[ccxt_symbol] = mt5_symbol
+    return mapping
 
 
 def _scripted_responses(raw: str):

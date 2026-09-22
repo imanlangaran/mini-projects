@@ -12,7 +12,7 @@ market strategy.
 |---|---|
 | Document | Requirements specification (v1.1) |
 | Status | Draft — defines *what* the system must do, before further development |
-| Related docs | [ARCHITECTURE.md](./ARCHITECTURE.md) — design and behavior details · [SETUP.md](./SETUP.md) — development setup guide |
+| Related docs | [ARCHITECTURE.md](./ARCHITECTURE.md) — design and behavior details · [USAGE.md](./USAGE.md) — how to run · [SETUP.md](./SETUP.md) — development setup guide |
 
 ---
 
@@ -543,6 +543,7 @@ The requirements above are the contract. Current implementation covers:
 TradeAgent/
 ├── README.md                 ← this file (requirements)
 ├── ARCHITECTURE.md           ← design details, agent behavior, risk engine
+├── USAGE.md                  ← how to run both projects
 ├── SETUP.md                  ← development setup guide for fresh machines
 ├── requirements.txt          ← pinned known-good dependencies
 ├── chartbridge/              ← AI annotations on MT5 charts (see its README)

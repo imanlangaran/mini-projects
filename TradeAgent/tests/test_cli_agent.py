@@ -127,5 +127,99 @@ class TestCliRun:
     def test_invalid_scripted_json_fails_loud(self, env, capsys):
         with pytest.raises(SystemExit) as excinfo:
             main(["--strategy", "price-action", "--scripted", "{nope"])
+        assert excinfo.value.code == 2
+
+
+class TestCliProviderFlag:
+    """--provider mt5 routes to the MT5 backend and parses the symbol map."""
+
+    def test_mt5_provider_full_run(self, env, monkeypatch, capsys):
+        captured = {}
+        fake_provider = FreshCandlesProvider()
+
+        def fake_factory(**kwargs):
+            captured.update(kwargs)
+            return fake_provider
+
+        monkeypatch.setattr("trading.cli.MT5MarketDataProvider", fake_factory)
+        scripted = json.dumps({"BTC/USDT": ENTRY_RESPONSE})
+
+        code = main(
+            [
+                "--strategy", "price-action",
+                "--provider", "mt5",
+                "--mt5-symbol-map", "BTC/USDT=BTCUSD,ETH/USDT=ETHUSD",
+                "--scripted", scripted,
+            ]
+        )
+
+        assert code == 0
+        assert captured["symbol_map"] == {"BTC/USDT": "BTCUSD", "ETH/USDT": "ETHUSD"}
+        out = capsys.readouterr().out
+        assert "Decision: ENTRY_CANDIDATE" in out
+        assert "Risk result: PASS" in out
+        assert "NOT EXECUTED (agent cannot trade)" in out
+
+    def test_mt5_provider_without_symbol_map_passes_empty(self, env, monkeypatch):
+        captured = {}
+
+        def fake_factory(**kwargs):
+            captured.update(kwargs)
+            return FreshCandlesProvider()
+
+        monkeypatch.setattr("trading.cli.MT5MarketDataProvider", fake_factory)
+        scripted = json.dumps({"BTC/USDT": ENTRY_RESPONSE})
+
+        code = main(
+            [
+                "--strategy", "price-action",
+                "--provider", "mt5",
+                "--scripted", scripted,
+            ]
+        )
+
+        assert code == 0
+        assert captured["symbol_map"] == {}
+
+    def test_invalid_provider_choice_fails_loud(self, env, capsys):
+        with pytest.raises(SystemExit) as excinfo:
+            main(
+                [
+                    "--strategy", "price-action",
+                    "--provider", "binance",
+                    "--scripted", "{}",
+                ]
+            )
 
         assert excinfo.value.code == 2
+        assert "invalid choice" in capsys.readouterr().err
+
+    def test_malformed_symbol_map_fails_loud(self, env, monkeypatch, capsys):
+        monkeypatch.setattr(
+            "trading.cli.MT5MarketDataProvider", lambda **kw: FreshCandlesProvider()
+        )
+
+        with pytest.raises(SystemExit) as excinfo:
+            main(
+                [
+                    "--strategy", "price-action",
+                    "--provider", "mt5",
+                    "--mt5-symbol-map", "BTC/USDT=BTCUSD,BROKEN",
+                    "--scripted", "{}",
+                ]
+            )
+
+        assert excinfo.value.code == 2
+        assert "expects CCXT=MT5 pairs" in capsys.readouterr().err
+
+    def test_ccxt_stays_the_default(self, env, monkeypatch):
+        # Regression: without --provider the CLI still wires the CCXT
+        # backend (the env fixture overrides its constructor).
+        captured = []
+        monkeypatch.setattr("trading.cli.create_binance", lambda: captured.append("binance") or None)
+        scripted = json.dumps({"BTC/USDT": ENTRY_RESPONSE})
+
+        code = main(["--strategy", "price-action", "--scripted", scripted])
+
+        assert code == 0
+        assert captured == ["binance"]

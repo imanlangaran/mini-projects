@@ -5,8 +5,9 @@ running: the analysis core (`src/trading`), the chartbridge pipeline
 (`chartbridge/`), and — on Windows only — the MT5 Expert Advisor.
 
 > Related docs: [README.md](./README.md) (requirements spec) ·
-> [ARCHITECTURE.md](./ARCHITECTURE.md) (design) ·
-> [chartbridge/README.md](./chartbridge/README.md) (bridge details)
+> [ARCHITECTURE.md](./ARCHITECTURE.md) (design) · [USAGE.md](./USAGE.md)
+> (how to run) · [chartbridge/README.md](./chartbridge/README.md)
+> (bridge details)
 
 ---
 
@@ -84,8 +85,8 @@ pip install -r requirements.txt
 pytest -q
 ```
 
-Expected: **66 passed** (29 core + 37 chartbridge) in a few seconds,
-with no network access needed.
+Expected: **251 passed** (core) and `pytest chartbridge -q` → **37
+passed** in a few seconds, with no network access needed.
 
 ---
 
@@ -198,5 +199,5 @@ bridge tests → fake-AI POST → EA receives (Experts log) → line on chart
   `pandas-ta-classic 0.8.32`, `pydantic 2.13.5`, `pyarrow 25.0.1`,
   `requests 2.34.2`, `pytest 9.1.1`.
 - After changing dependencies: install, run the full suite
-  (`pytest -q` → 66), then update the pins in `requirements.txt` in the
-  same commit.
+  (`pytest -q` → 251, `pytest chartbridge -q` → 37), then update the
+  pins in `requirements.txt` in the same commit.
