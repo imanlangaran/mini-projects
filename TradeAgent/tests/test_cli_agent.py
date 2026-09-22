@@ -104,6 +104,26 @@ class TestCliRun:
         assert code == 2
         assert "--scripted" in capsys.readouterr().err
 
+    def test_run_scaffolds_the_analysis_workspace(self, env, capsys):
+        scripted = json.dumps({"BTC/USDT": ENTRY_RESPONSE})
+
+        code = main(["--strategy", "price-action", "--scripted", scripted])
+
+        assert code == 0
+        # The predefined layout exists under the run's data dir (FR-19).
+        workspace = env / "analysis" / "BTC-USDT"
+        assert (workspace / "registry.md").is_file()
+        assert (workspace / "knowledge").is_dir()
+        assert (workspace / "positions").is_dir()
+        # The record points at it (FR-27).
+        record = json.loads(next((env / "runs").glob("run-*.json")).read_text())
+        assert (
+            record["analysis_workspace"]["BTC/USDT"]["workspace_root"]
+            == str(workspace)
+        )
+        # And the run output tells the user where the agent works.
+        assert "Analysis workspace:" in capsys.readouterr().out
+
     def test_invalid_scripted_json_fails_loud(self, env, capsys):
         with pytest.raises(SystemExit) as excinfo:
             main(["--strategy", "price-action", "--scripted", "{nope"])

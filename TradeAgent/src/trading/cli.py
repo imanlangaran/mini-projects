@@ -12,10 +12,13 @@ Runs one full cycle for the active strategy (ARCHITECTURE §11):
    → agent evaluation + FR-26 schema validation (FR-15, Test 5) →
    deterministic risk engine, the final gate (FR-18). The agent is
    read-only: it proposes, it never executes (FR-16).
-5. Write ONE audit record per run under ``data/runs/`` (FR-27).
-6. Print the snapshots, the gate/agent/risk outcome per symbol, and the
-   final proposal (order layer intentionally absent — the agent cannot
-   trade).
+5. Write ONE audit record per run under ``data/runs/`` (FR-27). The run
+   also scaffolds the agent-owned analysis workspace per symbol
+   (``data/analysis/<symbol>/`` — FR-19) and hands its tools to the
+   agent; OPEN positions come from ``registry.md`` (FR-24).
+6. Print the snapshots, the gate/agent/risk outcome per symbol, the
+   analysis-workspace pointers, and the final proposal (order layer
+   intentionally absent — the agent cannot trade).
 
 The reasoning layer is ``--scripted`` for now (deterministic responses
 for tests/replay); a live Hermes backend replaces it without touching
@@ -125,6 +128,16 @@ def _scripted_responses(raw: str):
 def _print_record(record, config, symbols) -> None:
     for symbol in symbols:
         print(f"== {symbol} ==")
+
+        workspace = record.analysis_workspace.get(symbol)
+        if workspace:
+            print(f"  Analysis workspace: {workspace['workspace_root']}  (FR-19)")
+            if workspace["open_positions"]:
+                print(
+                    "  Open positions: "
+                    + ", ".join(workspace["open_positions"])
+                    + ("" if not workspace["max_open_reached"] else "  (max reached)")
+                )
 
         gate = record.pre_checks.get(symbol, {}).get("decision")
         print(f"  Pre-checks: {gate}")
