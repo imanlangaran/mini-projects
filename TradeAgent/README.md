@@ -488,7 +488,12 @@ The requirements above are the contract. Current implementation covers:
       period-consistent timestamps; gaps back-filled from the provider,
       an irreparable hole fails the run loudly (`ContinuityError`)
 - [ ] FR-15, FR-17 — agent evaluation loop and saved proposals
-- [ ] FR-18 — deterministic risk engine
+- [x] FR-18 — deterministic risk engine (`trading.risk.engine`: entry
+      candidates sized from `EQUITY × RISK_PER_TRADE / |entry − SL|`,
+      max-risk + min-R/R gates; exit candidates validity-only, never
+      sized; rejected candidates keep their decision with
+      `risk_result: REJECT`, FR-26; `EQUITY` declared in the strategy
+      config, validated at load)
 - [x] FR-25 — deterministic pre-checks (configurable registry:
       `trading.checks.prechecks`, wired into the CLI before the agent
       call; `PRECHECKS` in the strategy config selects/tunes checks)

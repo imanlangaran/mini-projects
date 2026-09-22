@@ -26,6 +26,11 @@ NAME = "Support & Resistance Price Action"
 
 SYMBOLS = ("BTC/USDT",)
 
+#: Account equity used by the deterministic risk engine (FR-18).
+#: strategy.md: risk management is anchored on 1% of account equity.
+#: The engine never fetches equity from an exchange (FR-18).
+EQUITY = 10_000
+
 #: Timeframes the collector must keep and the agent must analyze.
 #: strategy.md: "Timeframes: 4h, 1h" (4h for structure, 1h for confirmation).
 TIMEFRAMES = ("4h", "1h")

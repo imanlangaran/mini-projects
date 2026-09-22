@@ -22,6 +22,7 @@ from __future__ import annotations
 import importlib.util
 import os
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
@@ -64,6 +65,9 @@ class StrategyConfig:
     #: Deterministic pre-checks selection/tuning (FR-25); ``None`` → all
     #: registered checks with defaults. See ``trading.checks.prechecks``.
     prechecks: dict[str, Any] | None = None
+    #: Account equity for the deterministic risk engine (FR-18). The engine
+    #: never fetches it from an exchange — it is config-declared.
+    equity: Decimal = Decimal("0")
 
     def indicators_for(self, timeframe: str | None = None) -> tuple[IndicatorSpec, ...]:
         """Indicators that apply to ``timeframe`` (all if ``None``)."""
@@ -107,6 +111,8 @@ def load_strategy_config(slug: str, base_dir: Path | None = None) -> StrategyCon
     - ``PARAMS``: dict[str, Any] (strategy-specific knobs, default {})
     - ``PRECHECKS``: dict[str, Any] (optional; deterministic pre-check
       selection/tuning, FR-25 — see ``trading.checks.prechecks``)
+    - ``EQUITY``: int/float/str (optional; account equity for the
+      deterministic risk engine, FR-18 — never fetched from an exchange)
 
     Raises ``ValueError`` with a descriptive message when the module is
     missing a required declaration or its contents are inconsistent.
@@ -171,6 +177,8 @@ def load_strategy_config(slug: str, base_dir: Path | None = None) -> StrategyCon
             f"got {type(prechecks_raw).__name__}"
         )
 
+    equity = _equity(module, module_path)
+
     return StrategyConfig(
         slug=slug,
         name=getattr(module, "NAME", slug.replace("-", " ").title()),
@@ -182,7 +190,34 @@ def load_strategy_config(slug: str, base_dir: Path | None = None) -> StrategyCon
         max_positions=int(getattr(module, "MAX_POSITIONS", 1)),
         params=dict(getattr(module, "PARAMS", {})),
         prechecks=dict(prechecks_raw) if prechecks_raw is not None else None,
+        equity=equity,
     )
+
+
+def _equity(module, module_path: Path) -> Decimal:
+    """Parse the optional ``EQUITY`` declaration into a Decimal (FR-18).
+
+    The risk engine's account equity is configuration, never an exchange
+    call. Fail loud on anything that is not a positive finite number —
+    a silently-zero equity would make every position size zero.
+    """
+    raw = getattr(module, "EQUITY", None)
+    if raw is None:
+        return Decimal("0")
+
+    try:
+        equity = Decimal(str(raw))
+    except (InvalidOperation, ValueError) as exc:
+        raise ValueError(
+            f"{module_path}: EQUITY must be a number, got {raw!r}"
+        ) from exc
+    if not equity.is_finite():
+        raise ValueError(f"{module_path}: EQUITY must be finite, got {raw!r}")
+    if equity <= 0:
+        raise ValueError(
+            f"{module_path}: EQUITY must be positive, got {equity}"
+        )
+    return equity
 
 
 def _require_tuple(module, attribute: str, slug: str) -> tuple:

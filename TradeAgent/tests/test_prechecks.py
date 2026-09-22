@@ -285,7 +285,17 @@ class TestRRArithmetic:
 
         assert report.decision is PreCheckDecision.NO_TRADE
         failed = next(r for r in report.results if not r.passed)
-        assert "SL < entry < TP" in failed.evidence
+        assert "SL <= entry <= TP" in failed.evidence
+
+    def test_sl_equal_to_entry_fails_in_sizing_terms(self):
+        # SL == entry → zero risk distance: ordering holds, but the R/R
+        # gate still fails loud ("risk distance is zero") instead of
+        # dividing by zero.
+        report = run(candidate=candidate(sl="67000", tp="68000"))
+
+        assert report.decision is PreCheckDecision.NO_TRADE
+        failed = next(r for r in report.results if not r.passed)
+        assert "zero" in failed.evidence
 
     def test_short_side_levels(self):
         # SHORT: TP < entry < SL; reward 1000 / risk 500 → R/R 2.0.
