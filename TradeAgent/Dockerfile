@@ -52,8 +52,11 @@ RUN useradd --create-home --shell /bin/bash trader && \
     mkdir -p /data && chown trader:trader /data /app
 USER trader
 
-# Fail the build if the suite regresses: 251 core + 37 chartbridge tests.
+# Regression gate as a real build step: `docker build --target test` fails
+# if the suite regresses (RUN, not CMD — CMD never executes at build time).
 # `python -m pytest` (not the console script) so /app lands on sys.path.
+# CMD reruns the suite for `docker run` / `docker compose run --rm test`.
+RUN python -m pytest -q && python -m pytest chartbridge -q
 CMD ["sh", "-c", "python -m pytest -q && python -m pytest chartbridge -q"]
 
 # ---------------------------------------------------------------------------
@@ -68,6 +71,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH" \
     TRADEAGENT_DATA_DIR=/data \
     TRADEAGENT_STRATEGIES_DIR=/app/strategies \
+    PYTHONPATH=/app/src \
     NO_PROXY=localhost,127.0.0.1,::1 \
     no_proxy=localhost,127.0.0.1,::1
 
