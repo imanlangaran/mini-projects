@@ -12,7 +12,7 @@ market strategy.
 |---|---|
 | Document | Requirements specification (v1.1) |
 | Status | Draft — defines *what* the system must do, before further development |
-| Related docs | [ARCHITECTURE.md](./ARCHITECTURE.md) — design and behavior details · [USAGE.md](./USAGE.md) — how to run · [SETUP.md](./SETUP.md) — development setup guide |
+| Related docs | [ARCHITECTURE.md](./ARCHITECTURE.md) — design and behavior details · [USAGE.md](./USAGE.md) — how to run · [SETUP.md](./SETUP.md) — development setup guide · [DOCKER.md](./DOCKER.md) — container guide (Linux + Windows) |
 
 ---
 

@@ -25,7 +25,7 @@ python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
 # 2) verify
-pytest -q                 # core suite (251 tests, no network)
+pytest -q                 # core suite (258 tests, no network)
 pytest chartbridge -q     # chartbridge suite (37 tests, no network)
 
 # 3) run the analysis loop with a scripted agent (needs internet, Binance)
@@ -35,6 +35,16 @@ python -m trading.cli --strategy price-action \
 # 4) chartbridge: bridge + smoke test (two terminals)
 uvicorn chartbridge.bridge.main:app --host 127.0.0.1 --port 8000
 python -m chartbridge.agent.main --backend synthetic
+```
+
+**Container alternative** (no venv needed; identical on Linux and
+Windows): see [DOCKER.md](./DOCKER.md) —
+
+```bash
+docker compose build
+docker compose run --rm analysis --strategy price-action \
+    --scripted '{"BTC/USDT": {"decision": "NO_TRADE", "symbol": "BTC/USDT", "reasoning": "smoke test"}}'
+docker compose up -d bridge
 ```
 
 ---
@@ -115,8 +125,10 @@ python -m trading.cli --strategy price-action --symbol ETH/USDT --scripted path/
 
 | Variable | Purpose |
 |---|---|
-| `TRADEAGENT_DATA_DIR` | Data root for `data/market/`, `data/analysis/`, `data/runs/` (default: `<repo>/data/`). Tests point this at a temp dir. |
-| `TRADEAGENT_STRATEGIES_DIR` | Strategy root (default: `<repo>/strategies/`). |
+| `TRADEAGENT_DATA_DIR` | Data root for `data/market/`, `data/analysis/`, `data/runs/` (default: `<repo>/data/`). Tests point this at a temp dir. In containers it is fixed to `/data` (bind-mounted to `./data/`). |
+| `TRADEAGENT_STRATEGIES_DIR` | Strategy root (default: `<repo>/strategies/`). In containers: `/app/strategies` (baked into the image). |
+| `TRADEAGENT_EXCHANGE` | ccxt exchange id for market data (default `binance`). Set `binanceus`/`kraken`/… where binance returns HTTP 451 — see [DOCKER.md](./DOCKER.md) §5. |
+| `TRADEAGENT_PROXY` | Compose-only: outbound proxy for containers (empty = direct). Machine values live in `.env` — see [DOCKER.md](./DOCKER.md) §5. |
 
 ### Data layout (after a run)
 
@@ -227,12 +239,16 @@ bridge tests → fake-AI POST → EA receives (Experts log) → line on chart
 ## 4. Testing
 
 ```bash
-pytest -q               # core: 251 passed (no network)
+pytest -q               # core: 258 passed (no network)
 pytest chartbridge -q   # chartbridge: 37 passed (no network)
 ```
 
 Both suites are hermetic: fake/providers generate deterministic data,
 runs point at temp dirs, no exchange or terminal is touched.
+
+The same suites run in the container — `docker run --rm tradeagent:test`
+(or `docker build --target test`, which fails on regression). See
+[DOCKER.md](./DOCKER.md).
 
 ---
 
@@ -242,8 +258,9 @@ runs point at temp dirs, no exchange or terminal is touched.
 |---|---|---|
 | `ModuleNotFoundError: No module named 'trading'` | running outside the repo root | run from `TradeAgent/` (`pytest.ini` sets `pythonpath = src`) |
 | CLI: `ERROR: no agent backend is wired yet` | `--scripted` missing | pass `--scripted` with a JSON dict/list/file (Section 2) |
-| pip: `Network is unreachable (Errno 101)` | blocked network | export `https_proxy`/`http_proxy` before pip (SETUP.md §3) |
-| ccxt: connection refused despite proxy env | ccxt ignores `https_proxy` | pass the proxy via `exchange.session.proxies` explicitly (pattern in `chartbridge/agent/main.py`) |
+| pip: `Network is unreachable (Errno 101)` | blocked network | export `https_proxy`/`http_proxy` before pip (SETUP.md §3); in containers use `TRADEAGENT_PROXY` in `.env` (DOCKER.md §5) |
+| ccxt: connection refused despite proxy env | ccxt ignores `https_proxy` | pass the proxy via `exchange.session.proxies` explicitly — done by `create_binance()` and in `chartbridge/agent/main.py` |
+| ccxt: binance `451 restricted location` | exchange geo-blocks your network's exit region | set `TRADEAGENT_EXCHANGE=binanceus` (or another reachable id) |
 | EA log: `WebRequest failed. Error: 4014 / 4060` | bridge URL not whitelisted | Section 3, step 2 |
 | EA log: no lines / HTTP 404 | chart symbol/timeframe mismatch | chart must match the POST; timeframes normalize (`M15` == `15m`) |
 | `POST` returns `422` | invalid payload | `id` must match `[A-Za-z0-9_]+`, `direction` is `up\|down`, times are integer epoch seconds |

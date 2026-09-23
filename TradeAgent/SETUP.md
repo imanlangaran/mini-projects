@@ -6,8 +6,8 @@ running: the analysis core (`src/trading`), the chartbridge pipeline
 
 > Related docs: [README.md](./README.md) (requirements spec) ·
 > [ARCHITECTURE.md](./ARCHITECTURE.md) (design) · [USAGE.md](./USAGE.md)
-> (how to run) · [chartbridge/README.md](./chartbridge/README.md)
-> (bridge details)
+> (how to run) · [DOCKER.md](./DOCKER.md) (containers) ·
+> [chartbridge/README.md](./chartbridge/README.md) (bridge details)
 
 ---
 
@@ -25,6 +25,12 @@ The git repository root is the parent folder; this project lives in
 | `chartbridge/mt5/` | MQL5 Expert Advisor | Windows + MT5 terminal |
 | `tests/` | Core test suite | no |
 | `data/` | Created at runtime: candles + agent analysis workspace | no |
+| `Dockerfile` + `docker-compose.yml` | Container images (analysis core, bridge, test gate) | only for base image + pip |
+
+Everything in `src/trading`, `strategies/` and `chartbridge/` also runs
+in containers with no changes — see [DOCKER.md](./DOCKER.md) for the
+container workflow (recommended on Windows; identical commands on
+Linux).
 
 ---
 
@@ -34,6 +40,9 @@ The git repository root is the parent folder; this project lives in
 - **git**
 - **Windows + MetaTrader 5 terminal** — only for the chart-drawing part;
   everything else runs on Linux, macOS and Windows
+- *Container alternative:* Docker + Compose replace the venv steps
+  below entirely — jump to [DOCKER.md](./DOCKER.md) if you prefer
+  containers (the recommended path on Windows)
 - Optional: a local HTTP proxy if your network blocks PyPI/exchanges
   (see the notes in steps 3 and 6)
 
@@ -85,7 +94,7 @@ pip install -r requirements.txt
 pytest -q
 ```
 
-Expected: **251 passed** (core) and `pytest chartbridge -q` → **37
+Expected: **258 passed** (core) and `pytest chartbridge -q` → **37
 passed** in a few seconds, with no network access needed.
 
 ---
@@ -199,5 +208,5 @@ bridge tests → fake-AI POST → EA receives (Experts log) → line on chart
   `pandas-ta-classic 0.8.32`, `pydantic 2.13.5`, `pyarrow 25.0.1`,
   `requests 2.34.2`, `pytest 9.1.1`.
 - After changing dependencies: install, run the full suite
-  (`pytest -q` → 251, `pytest chartbridge -q` → 37), then update the
+  (`pytest -q` → 258, `pytest chartbridge -q` → 37), then update the
   pins in `requirements.txt` in the same commit.
