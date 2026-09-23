@@ -2,3 +2,6 @@
 # (candles + indicators in data/market, agent analysis in data/analysis,
 #  audit records in data/runs). Never commit market data or agent state.
 data/
+
+# Machine-local compose overrides (use .env.example as the template)
+.env

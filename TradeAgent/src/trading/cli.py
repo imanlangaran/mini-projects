@@ -146,6 +146,8 @@ def _build_provider(args):
         return MT5MarketDataProvider(
             symbol_map=_mt5_symbol_map(args.mt5_symbol_map)
         )
+    # Exchange id: explicit TRADEAGENT_EXCHANGE env override, else binance
+    # (historical default; binance returns HTTP 451 from some regions).
     exchange = create_binance()
     return CCXTMarketDataProvider(exchange)
 

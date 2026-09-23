@@ -14,26 +14,57 @@ services:
     build:
       context: .
       target: runtime
+      args:
+        HTTP_PROXY: ${TRADEAGENT_PROXY:-}
+        HTTPS_PROXY: ${TRADEAGENT_PROXY:-}
     image: tradeagent:latest
     volumes:
       - ./data:/data
-    # --scripted is required by the CLI; edit this command (or pass args via
-    # `docker compose run --rm analysis … <extra args>`) for real runs.
-    command: >
-      --strategy price-action
-      --scripted {"BTC/USDT": {"decision": "NO_TRADE", "symbol": "BTC/USDT", "reasoning": "smoke test"}}
+    environment:
+      # Outbound HTTPS (exchange data via ccxt) goes through the proxy when
+      # TRADEAGENT_PROXY is set (see .env.example); empty default = direct.
+      # All four spellings are pinned so Docker Desktop's auto-injected
+      # 127.0.0.1 proxy (unreachable from inside a container) can't leak in.
+      HTTP_PROXY: ${TRADEAGENT_PROXY:-}
+      HTTPS_PROXY: ${TRADEAGENT_PROXY:-}
+      http_proxy: ${TRADEAGENT_PROXY:-}
+      https_proxy: ${TRADEAGENT_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,::1
+      no_proxy: localhost,127.0.0.1,::1
+      # ccxt exchange id override (default binance; see .env.example)
+      TRADEAGENT_EXCHANGE: ${TRADEAGENT_EXCHANGE:-}
+    # --scripted is required by the CLI (USAGE §2) — pass it as run args:
+    #   docker compose run --rm analysis --strategy price-action \
+    #       --scripted '{"BTC/USDT": {"decision": "NO_TRADE", ...}}'
+    # (no default command: failing loud beats a silently wrong run)
+    entrypoint: ["python", "-m", "trading.cli"]
 
   bridge:
     build:
       context: .
       target: runtime
+      args:
+        HTTP_PROXY: ${TRADEAGENT_PROXY:-}
+        HTTPS_PROXY: ${TRADEAGENT_PROXY:-}
     image: tradeagent:latest
     volumes:
       - ./data:/data
     ports:
       - "8000:8000"
-    command: >
-      uvicorn chartbridge.bridge.main:app --host 0.0.0.0 --port 8000
+    environment:
+      # Same proxy pinning as the analysis service: keeps Docker Desktop's
+      # auto-injected 127.0.0.1 proxy from leaking in. The bridge itself
+      # only serves localhost traffic (NO_PROXY) — no outbound calls.
+      HTTP_PROXY: ${TRADEAGENT_PROXY:-}
+      HTTPS_PROXY: ${TRADEAGENT_PROXY:-}
+      http_proxy: ${TRADEAGENT_PROXY:-}
+      https_proxy: ${TRADEAGENT_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,::1
+      no_proxy: localhost,127.0.0.1,::1
+    # Override the image ENTRYPOINT (python -m trading.cli): compose `command:`
+    # alone would only append args to it.
+    entrypoint: ["python", "-m", "uvicorn"]
+    command: ["chartbridge.bridge.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
   # Run the full test suite inside the image:
   #   docker compose run --rm test
