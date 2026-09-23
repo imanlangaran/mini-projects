@@ -1,0 +1,46 @@
+# TradeAgent — local orchestration (Docker Compose)
+#
+# Works identically on Linux and Windows (Docker Desktop + WSL2 backend).
+#
+#   docker compose build                          # build both images
+#   docker compose run --rm analysis              # analysis run (override args)
+#   docker compose up bridge                      # start the chart bridge
+#
+# The data/ directory is bind-mounted so candles, analysis state, and audit
+# records live on the host — swap hosts (Linux/Windows) without losing state.
+
+services:
+  analysis:
+    build:
+      context: .
+      target: runtime
+    image: tradeagent:latest
+    volumes:
+      - ./data:/data
+    # --scripted is required by the CLI; edit this command (or pass args via
+    # `docker compose run --rm analysis … <extra args>`) for real runs.
+    command: >
+      --strategy price-action
+      --scripted {"BTC/USDT": {"decision": "NO_TRADE", "symbol": "BTC/USDT", "reasoning": "smoke test"}}
+
+  bridge:
+    build:
+      context: .
+      target: runtime
+    image: tradeagent:latest
+    volumes:
+      - ./data:/data
+    ports:
+      - "8000:8000"
+    command: >
+      uvicorn chartbridge.bridge.main:app --host 0.0.0.0 --port 8000
+
+  # Run the full test suite inside the image:
+  #   docker compose run --rm test
+  test:
+    build:
+      context: .
+      target: test
+    image: tradeagent:test
+    volumes:
+      - ./data:/data
